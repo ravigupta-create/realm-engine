@@ -12,7 +12,7 @@ const Dialogue = (() => {
   const TYPEWRITER_SPEED = 30; // characters per second
 
   // Shop state
-  let _shopMode = null; // null, 'buy', 'sell', 'crafting', 'skills'
+  let _shopMode = null; // null, 'buy', 'sell', 'crafting', 'skills', 'enchanting'
   let _shopSelected = 0;
   let _shopItems = [];
 
@@ -148,6 +148,9 @@ const Dialogue = (() => {
       case 'open_skills':
         openSkillTrainer();
         break;
+      case 'open_enchanting':
+        openEnchanting();
+        break;
       case 'full_heal':
         if (GS.player) {
           GS.player.stats.hp = GS.player.stats.maxHp;
@@ -180,6 +183,23 @@ const Dialogue = (() => {
     _shopMode = 'skills';
     _shopSelected = 0;
     _shopItems = Classes.getAvailableSkillUpgrades(GS.player);
+  }
+
+  function openEnchanting() {
+    _shopMode = 'enchanting';
+    _shopSelected = 0;
+    if (typeof Enchanting !== 'undefined') {
+      // List all enchants with availability status
+      _shopItems = Enchanting.getAllEnchants().map(e => {
+        const slotMap = { weapon: ['weapon'], armor: ['armor', 'helmet', 'boots'], accessory: ['ring', 'amulet'] };
+        const validSlots = slotMap[e.slot] || [];
+        const targetItem = validSlots.map(s => GS.player.equipment[s]).find(i => i && !i.enchant);
+        const check = targetItem ? Enchanting.canEnchant(targetItem, e.id) : { ok: false, reason: 'No unenchanted ' + e.slot };
+        return { ...e, canApply: check.ok, reason: check.reason, targetItem };
+      });
+    } else {
+      _shopItems = [];
+    }
   }
 
   function handleShopInput(dt) {
@@ -256,6 +276,18 @@ const Dialogue = (() => {
         } else {
           Core.addNotification('No skill points!', 2);
         }
+      } else if (_shopMode === 'enchanting') {
+        const enchant = _shopItems[_shopSelected];
+        if (enchant && enchant.canApply && enchant.targetItem) {
+          const result = Enchanting.enchantItem(enchant.targetItem, enchant.id);
+          if (result.ok) {
+            if (typeof Particles !== 'undefined') Particles.emit('buff', Renderer.getWidth() / 2, Renderer.getHeight() / 2, 15);
+            openEnchanting(); // Refresh list
+            if (_shopSelected >= _shopItems.length) _shopSelected = Math.max(0, _shopItems.length - 1);
+          }
+        } else {
+          Core.addNotification(enchant.reason || 'Missing materials or equipment!', 2);
+        }
       }
     }
 
@@ -318,6 +350,7 @@ const Dialogue = (() => {
     else if (_shopMode === 'sell') title = 'SHOP - Sell';
     else if (_shopMode === 'crafting') title = 'CRAFTING';
     else if (_shopMode === 'skills') title = `SKILLS (${GS.player.skillPoints || 0} points)`;
+    else if (_shopMode === 'enchanting') title = 'ENCHANTING';
 
     Renderer.drawText(title, w / 2, 55, '#ffcc00', 20, 'center');
     Renderer.drawText(`Gold: ${GS.player.gold || 0}`, w - 100, 55, '#ffcc00', 14, 'right');
@@ -357,6 +390,12 @@ const Dialogue = (() => {
         const color = sel ? '#ffcc00' : '#ddd';
         Renderer.drawText(`${prefix}${item.name} (Lv.${item.levelReq})`, 70, y, color, 14);
         Renderer.drawText(`${item.mpCost} MP - ${item.desc}`, 70, y + 14, '#888', 10);
+      } else if (_shopMode === 'enchanting') {
+        const color = sel ? '#ffcc00' : (item.canApply ? '#ddd' : '#666');
+        const targetName = item.targetItem ? ` → ${item.targetItem.name}` : '';
+        Renderer.drawText(`${prefix}${item.name} [T${item.tier || 1}]${targetName}`, 70, y, color, 14);
+        const goldCost = item.cost ? `${item.cost.gold}g` : '';
+        Renderer.drawText(`${goldCost} | ${item.desc || ''}`, 70, y + 14, item.canApply ? '#888' : '#555', 10);
       }
     }
 

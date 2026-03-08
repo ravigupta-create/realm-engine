@@ -609,6 +609,13 @@ const Combat = (() => {
         const dmg = eff.damage || Math.floor(entity.stats.maxHp * 0.05);
         entity.stats.hp = Math.max(0, entity.stats.hp - dmg);
         addLog(`${entity.name}: ${dmg} ${eff.type} dmg`);
+        // Tick particles
+        if (typeof Particles !== 'undefined') {
+          const eidx = getLiveEnemies().indexOf(entity);
+          const px = eidx >= 0 ? getEnemyScreenX(eidx) : Renderer.getWidth() * 0.65;
+          Particles.emit(eff.type === 'burn' ? 'fire' : 'poison', px, Renderer.getHeight() * 0.4, 6);
+        }
+        addFloatingNumber(Renderer.getWidth() * 0.65, Renderer.getHeight() * 0.35, dmg, eff.type === 'burn' ? '#f80' : '#0a0', 14);
       } else if (eff.type === 'regen') {
         const heal = eff.damage || Math.floor(entity.stats.maxHp * 0.05);
         entity.stats.hp = Math.min(entity.stats.maxHp, entity.stats.hp + heal);
@@ -625,6 +632,10 @@ const Combat = (() => {
         const dmg = eff.damage || Math.floor(GS.player.stats.maxHp * 0.05);
         GS.player.stats.hp = Math.max(0, GS.player.stats.hp - dmg);
         addLog(`You take ${dmg} ${eff.type} dmg`);
+        if (typeof Particles !== 'undefined') {
+          Particles.emit(eff.type === 'burn' ? 'fire' : 'poison', Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.4, 6);
+        }
+        addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.35, dmg, eff.type === 'burn' ? '#f80' : '#0a0', 14);
       } else if (eff.type === 'regen') {
         const heal = eff.damage || Math.floor(GS.player.stats.maxHp * 0.05);
         applyHeal(GS.player.stats, heal);
@@ -700,6 +711,7 @@ const Combat = (() => {
         if (enemy.isFinalBoss) {
           _combatResult = 'final_victory';
           _resultTimer = 4;
+          GS.mainQuestComplete = true;
         }
       }
 

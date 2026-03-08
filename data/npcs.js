@@ -58,9 +58,10 @@ const NPCs = (() => {
       role: 'crafter',
       dialogueTree: {
         start: {
-          text: "Need something forged? Bring me the right materials and I'll craft you something special.",
+          text: "Need something forged? Bring me the right materials and I'll craft you something special. I can also enchant your gear!",
           choices: [
             { text: 'Show me what you can craft.', next: null, action: 'open_crafting' },
+            { text: 'Enchant my equipment.', next: null, action: 'open_enchanting' },
             { text: 'What materials do I need?', next: 'materials' },
             { text: 'Goodbye.', next: null }
           ]
@@ -69,6 +70,7 @@ const NPCs = (() => {
           text: "Gather Iron Ore from caves, Silver Ore from mountains, bones from skeletons, frost shards from ice elementals. Dragons drop rare scales. Keep everything you find!",
           choices: [
             { text: "Let's craft.", next: null, action: 'open_crafting' },
+            { text: 'Enchant my equipment.', next: null, action: 'open_enchanting' },
             { text: 'Goodbye.', next: null }
           ]
         }

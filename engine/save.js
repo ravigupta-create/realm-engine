@@ -53,6 +53,13 @@ const SaveSystem = (() => {
       party: GS.player.party ? GS.player.party.map(a => JSON.parse(JSON.stringify(a))) : [],
       // Fishing
       fishingUnlocked: GS.player.fishingUnlocked || false,
+      fishCaught: GS.player.fishCaught || {},
+      totalFishCaught: GS.player.totalFishCaught || 0,
+      fishingCombo: GS.player.fishingCombo || 0,
+      bestFishingCombo: GS.player.bestFishingCombo || 0,
+      rodLevel: GS.player.rodLevel || 1,
+      // Main quest flag
+      mainQuestComplete: GS.mainQuestComplete || false,
       // Bestiary
       bestiary: GS.bestiary || {},
       bestiaryRewards: GS.bestiaryRewards || {},
@@ -193,6 +200,14 @@ const SaveSystem = (() => {
 
     // Restore fishing
     GS.player.fishingUnlocked = data.fishingUnlocked || false;
+    GS.player.fishCaught = data.fishCaught || {};
+    GS.player.totalFishCaught = data.totalFishCaught || 0;
+    GS.player.fishingCombo = data.fishingCombo || 0;
+    GS.player.bestFishingCombo = data.bestFishingCombo || 0;
+    GS.player.rodLevel = data.rodLevel || 1;
+
+    // Main quest flag
+    GS.mainQuestComplete = data.mainQuestComplete || false;
 
     // Re-init achievements counters
     if (typeof Achievements !== 'undefined') Achievements.init();

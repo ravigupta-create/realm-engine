@@ -194,6 +194,10 @@
                 if (zone.id === 'frostpeak') Particles.spawnAmbient('snow', dt);
                 else if (zone.id === 'whisperwood') Particles.spawnAmbient('firefly', dt);
                 else if (zone.id === 'sunscorch') Particles.spawnAmbient('dust', dt);
+                else if (zone.id === 'eldergrove' && typeof DayNight !== 'undefined' && DayNight.getTimeOfDay().hours >= 18) Particles.spawnAmbient('firefly', dt);
+                else if (zone.id === 'crystal_sanctum') Particles.spawnAmbient('firefly', dt);
+                else if (zone.id === 'shadowmere') Particles.spawnAmbient('dust', dt);
+                else if (zone.id === 'abyss') Particles.spawnAmbient('dust', dt);
               }
             }
           });
