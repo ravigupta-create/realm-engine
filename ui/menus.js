@@ -1,4 +1,5 @@
 // ui/menus.js — Title screen, pause, settings, game over, class select, victory
+// + Achievements gallery, Bestiary encyclopedia, Daily Challenges tracker
 
 const Menus = (() => {
   let _titleSelected = 0;
@@ -12,8 +13,15 @@ const Menus = (() => {
   let _codeInput = '';
   let _cheatActive = false;
 
+  // Sub-screen system for pause menu
+  let _subScreen = null; // null, 'settings', 'achievements', 'bestiary', 'dailies', 'pets'
+  let _subSelected = 0;
+  let _subScroll = 0;
+
   const titleOptions = ['New Game', 'Continue', 'Enter Code', 'Settings'];
-  const pauseOptions = ['Resume', 'Inventory', 'Quest Log', 'Settings', 'Save Game', 'Quit to Title'];
+  const pauseOptions = ['Resume', 'Inventory', 'Quest Log', 'Achievements', 'Bestiary', 'Dailies', 'Pets', 'Settings', 'Save Game', 'Quit to Title'];
+
+  const settingsItems = ['Music Volume', 'SFX Volume', 'Difficulty', 'Show FPS', 'Back'];
 
   function update(dt) {
     switch (GS.state) {
@@ -29,7 +37,6 @@ const Menus = (() => {
   function updateTitle(dt) {
     _titleAnim += dt;
 
-    // Code entry mode
     if (_codeMode) {
       for (const code of Object.keys(Input.justPressed)) {
         if (code === 'Backspace') {
@@ -59,7 +66,6 @@ const Menus = (() => {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
-    // Mouse wheel scroll
     const titleWheel = Input.getWheelDelta();
     if (titleWheel !== 0) {
       _titleSelected = (_titleSelected + Math.sign(titleWheel) + titleOptions.length) % titleOptions.length;
@@ -90,9 +96,8 @@ const Menus = (() => {
           _codeInput = '';
           break;
         case 'Settings':
+          _subScreen = 'settings';
           _settingsSelected = 0;
-          GS.settings.showFPS = !GS.settings.showFPS;
-          Core.addNotification(`FPS Display: ${GS.settings.showFPS ? 'ON' : 'OFF'}`, 2);
           break;
       }
     }
@@ -112,9 +117,15 @@ const Menus = (() => {
   function renderTitle() {
     const w = Renderer.getWidth();
     const h = Renderer.getHeight();
+    const ctx = Renderer.getCtx();
+
+    // If sub-screen active (settings from title)
+    if (_subScreen === 'settings') {
+      renderSettings(w, h, ctx);
+      return;
+    }
 
     // Background gradient
-    const ctx = Renderer.getCtx();
     const grad = ctx.createRadialGradient(w / 2, h * 0.35, 0, w / 2, h * 0.35, w * 0.8);
     grad.addColorStop(0, '#12122a');
     grad.addColorStop(0.5, '#0a0a1e');
@@ -122,14 +133,14 @@ const Menus = (() => {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Subtle vignette
+    // Vignette
     const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.9);
     vig.addColorStop(0, 'rgba(0,0,0,0)');
     vig.addColorStop(1, 'rgba(0,0,0,0.5)');
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, w, h);
 
-    // Stars (more of them, varied sizes)
+    // Stars
     const rng = Utils.mulberry32(42);
     for (let i = 0; i < 100; i++) {
       const sx = rng() * w;
@@ -143,7 +154,7 @@ const Menus = (() => {
     }
     ctx.globalAlpha = 1;
 
-    // Decorative particles drifting up
+    // Floating particles
     for (let i = 0; i < 12; i++) {
       const px = w * 0.3 + rng() * w * 0.4;
       const py = h - (((_titleAnim * 15 + i * 50) % h));
@@ -154,19 +165,13 @@ const Menus = (() => {
     }
     ctx.globalAlpha = 1;
 
-    // Title with shadow
+    // Title
     const titleY = h * 0.22;
     const pulse = Math.sin(_titleAnim * 1.5) * 3;
-
-    // Title shadow
     ctx.globalAlpha = 0.3;
     Renderer.drawText('REALM ENGINE', w / 2 + 2, titleY + pulse + 2, '#000', 52, 'center', true);
     ctx.globalAlpha = 1;
-
-    // Main title
     Renderer.drawText('REALM ENGINE', w / 2, titleY + pulse, '#f0c040', 52, 'center', true);
-
-    // Subtitle
     Renderer.drawText('A Browser RPG Adventure', w / 2, titleY + 58, '#6a6a80', 14, 'center');
 
     // Decorative line
@@ -176,7 +181,6 @@ const Menus = (() => {
     ctx.moveTo(w / 2 - 120, titleY + 78);
     ctx.lineTo(w / 2 + 120, titleY + 78);
     ctx.stroke();
-    // Diamond center
     ctx.fillStyle = '#806020';
     ctx.save();
     ctx.translate(w / 2, titleY + 78);
@@ -223,7 +227,6 @@ const Menus = (() => {
     const classes = Classes.getAllClasses();
 
     if (_namingMode) {
-      // Listen for key presses for name input
       for (const code of Object.keys(Input.justPressed)) {
         if (code === 'Backspace') {
           _playerName = _playerName.slice(0, -1);
@@ -251,7 +254,6 @@ const Menus = (() => {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
-    // Mouse wheel scroll
     const classWheel = Input.getWheelDelta();
     if (classWheel !== 0) {
       _classSelected = (_classSelected + Math.sign(classWheel) + classes.length) % classes.length;
@@ -275,20 +277,15 @@ const Menus = (() => {
     const ctx = Renderer.getCtx();
     const classes = Classes.getAllClasses();
 
-    // Background
     const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.7);
     grad.addColorStop(0, '#0e0e22');
     grad.addColorStop(1, '#060610');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Main panel
     Renderer.drawPanel(30, 20, w - 60, h - 40, 'rgba(8,8,24,0.95)', '#2a2a40');
-
-    // Header
     Renderer.drawText('Choose Your Class', w / 2, 42, '#f0c040', 24, 'center', true);
 
-    // Decorative line under header
     ctx.strokeStyle = '#2a2a40';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -297,7 +294,6 @@ const Menus = (() => {
     ctx.stroke();
 
     if (_namingMode) {
-      // Name entry panel
       Renderer.drawPanel(w / 2 - 200, h / 2 - 70, 400, 140, 'rgba(16,16,40,0.95)', '#f0c040');
       Renderer.drawText('Enter Your Name', w / 2, h / 2 - 45, '#f0c040', 20, 'center', true);
       const nameDisplay = _playerName + (Math.floor(GS.time * 2) % 2 === 0 ? '_' : ' ');
@@ -306,14 +302,12 @@ const Menus = (() => {
       return;
     }
 
-    // Scroll offset: keep selected class centered in view
     const cardH = 72;
     const listH = h - 130;
     const totalH = classes.length * cardH;
     const maxScroll = Math.max(0, totalH - listH);
     const targetScroll = Math.max(0, Math.min(maxScroll, _classSelected * cardH - listH / 2 + cardH / 2));
 
-    // Clip area
     ctx.save();
     ctx.beginPath();
     ctx.rect(30, 70, w - 60, listH);
@@ -323,16 +317,12 @@ const Menus = (() => {
       const cls = Classes.getClass(classes[i]);
       const sel = i === _classSelected;
       const y = 75 + i * cardH - targetScroll;
-
-      // Skip off-screen
       if (y + cardH < 70 || y > h - 55) continue;
 
       const cardX = 50;
       const cardW = w - 100;
 
-      // Card background
       if (sel) {
-        // Selected glow
         ctx.fillStyle = 'rgba(240,192,64,0.06)';
         ctx.fillRect(cardX - 2, y - 2, cardW + 4, cardH - 4);
         Renderer.drawPanel(cardX, y, cardW, cardH - 8, 'rgba(30,30,60,0.9)', '#f0c040');
@@ -340,26 +330,20 @@ const Menus = (() => {
         Renderer.drawPanel(cardX, y, cardW, cardH - 8, 'rgba(16,16,32,0.7)', '#1e1e30');
       }
 
-      // Portrait
       const portrait = SpriteGen.cache.portraits[classes[i]];
       if (portrait) {
         ctx.drawImage(portrait, cardX + 10, y + 8, 48, 48);
       }
 
-      // Class name
       Renderer.drawText(cls.name, cardX + 72, y + 8, sel ? '#f0c040' : '#999', sel ? 18 : 16, 'left', sel);
-
-      // Description
       Renderer.drawText(cls.desc, cardX + 72, y + 28, sel ? '#c0c0d0' : '#666', 11);
 
-      // Stats bar
       const stats = cls.baseStats;
       Renderer.drawText(`HP:${stats.hp}  MP:${stats.mp}  STR:${stats.str}  DEF:${stats.def}  INT:${stats.int}  AGI:${stats.agi}  LUK:${stats.luk}`, cardX + 72, y + 44, '#4a4a60', 10);
     }
 
     ctx.restore();
 
-    // Scroll indicators
     if (targetScroll > 0) {
       ctx.globalAlpha = 0.5;
       Renderer.drawText('\u25B2', w / 2, 74, '#f0c040', 14, 'center');
@@ -371,18 +355,17 @@ const Menus = (() => {
       ctx.globalAlpha = 1;
     }
 
-    // Footer
     Renderer.drawText('\u2191\u2193 / Scroll to select  |  ENTER Choose  |  ESC Back', w / 2, h - 38, '#4a4a60', 11, 'center');
   }
 
+  // ======== NEW GAME ========
   function startNewGame(classType, name) {
-    // Reset game state
     GS.quests = [];
     GS.exploredTiles = {};
     GS.entities = [];
     GS.defeatedBosses = [];
     GS.achievements = [];
-    GS.gameTime = 360; // Start at 6:00 AM
+    GS.gameTime = 360;
     GS.playTime = 0;
     GS.notifications = [];
     GS.ngPlus = 0;
@@ -392,20 +375,21 @@ const Menus = (() => {
     GS.dailyChallenges = null;
     GS.achievementCounters = null;
 
-    // Create player
     GS.player = Classes.createPlayer(classType, name);
     GS.entities.push(GS.player);
 
-    // Apply cheat code if active
     if (_cheatActive) {
       applyMaxMode(GS.player);
     }
 
-    // Load starting zone
     WorldManager.loadZone('eldergrove');
-
-    // Auto-accept main quest
     Quests.acceptQuest('main_story');
+
+    // Init systems
+    if (typeof Achievements !== 'undefined') Achievements.init();
+    if (typeof Bestiary !== 'undefined') Bestiary.init();
+    if (typeof DailyChallenges !== 'undefined') DailyChallenges.init();
+    if (typeof NewGamePlus !== 'undefined') NewGamePlus.init();
 
     Core.setState(GameStates.PLAY);
     if (_cheatActive) {
@@ -421,8 +405,6 @@ const Menus = (() => {
 
   function applyMaxMode(player) {
     const s = player.stats;
-
-    // Max level and stats
     s.level = 30;
     s.xp = 0;
     s.xpToNext = 99999;
@@ -432,7 +414,6 @@ const Menus = (() => {
     s.maxMp = 999; s.mp = 999;
     s.str = 99; s.def = 99; s.int = 99; s.agi = 99; s.luk = 99;
 
-    // All skills for the class
     const cls = Classes.getClass(player.classType);
     if (cls) {
       for (const skillId of cls.skillTree) {
@@ -445,7 +426,6 @@ const Menus = (() => {
     }
     player.skillPoints = 10;
 
-    // Legendary equipment in every slot
     const slots = ['weapon', 'armor', 'helmet', 'boots', 'ring', 'amulet'];
     for (const slot of slots) {
       const item = Items.generateItem(30, 'legendary');
@@ -453,7 +433,6 @@ const Menus = (() => {
       player.equipment[slot] = item;
     }
 
-    // Fill inventory with max potions + materials
     player.items = [];
     for (let i = 0; i < 5; i++) {
       player.items.push({ id: Utils.genId(), name: 'Full Elixir', type: 'consumable', effect: 'heal_both', value: 9999, rarity: 'legendary', desc: 'Fully restores HP and MP.' });
@@ -464,7 +443,6 @@ const Menus = (() => {
     player.items.push({ id: 'fishing_rod', name: 'Fishing Rod', type: 'consumable', effect: 'none', value: 0, rarity: 'uncommon', desc: 'Used for fishing at water spots.' });
     player.fishingUnlocked = true;
 
-    // All pets
     if (typeof Pets !== 'undefined') {
       player.pets = [];
       for (const [id, def] of Object.entries(Pets.petDefs)) {
@@ -473,23 +451,20 @@ const Menus = (() => {
           level: 10, xp: 0, xpToNext: 500,
           passive: { ...def.passive }, combatBonus: { ...def.combatBonus }
         };
-        // Boost passive stats for level 10
         for (const k of Object.keys(pet.passive)) {
           pet.passive[k] = Math.floor(pet.passive[k] * 2.5);
         }
         player.pets.push(pet);
       }
-      player.activePet = player.pets[player.pets.length - 1]; // Void Dragonling
+      player.activePet = player.pets[player.pets.length - 1];
     }
 
-    // Full party
     if (typeof Allies !== 'undefined') {
       player.party = [];
       const topAllies = ['healer_willow', 'shadow_blade', 'fire_mage'];
       for (const aId of topAllies) {
         const ally = Allies.recruitAlly(aId);
         if (ally) {
-          // Max ally stats
           ally.level = 30;
           ally.stats.hp = 500; ally.stats.maxHp = 500;
           ally.stats.mp = 200; ally.stats.maxMp = 200;
@@ -499,12 +474,19 @@ const Menus = (() => {
       }
     }
 
-    // Mark cheat on save data
     GS.cheatActive = true;
   }
 
   // ======== PAUSE MENU ========
   function updatePause(dt) {
+    _titleAnim += dt;
+
+    // Sub-screen handling
+    if (_subScreen) {
+      updateSubScreen(dt);
+      return;
+    }
+
     if (Input.actionPressed(Input.Actions.UP)) {
       _pauseSelected = (_pauseSelected - 1 + pauseOptions.length) % pauseOptions.length;
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
@@ -514,7 +496,6 @@ const Menus = (() => {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
-    // Mouse wheel scroll
     const pauseWheel = Input.getWheelDelta();
     if (pauseWheel !== 0) {
       _pauseSelected = (_pauseSelected + Math.sign(pauseWheel) + pauseOptions.length) % pauseOptions.length;
@@ -533,9 +514,27 @@ const Menus = (() => {
         case 'Quest Log':
           Core.setState(GameStates.QUEST_LOG);
           break;
+        case 'Achievements':
+          _subScreen = 'achievements';
+          _subSelected = 0;
+          _subScroll = 0;
+          break;
+        case 'Bestiary':
+          _subScreen = 'bestiary';
+          _subSelected = 0;
+          _subScroll = 0;
+          break;
+        case 'Dailies':
+          _subScreen = 'dailies';
+          _subSelected = 0;
+          break;
+        case 'Pets':
+          _subScreen = 'pets';
+          _subSelected = 0;
+          break;
         case 'Settings':
-          GS.settings.showFPS = !GS.settings.showFPS;
-          Core.addNotification(`FPS: ${GS.settings.showFPS ? 'ON' : 'OFF'}`, 2);
+          _subScreen = 'settings';
+          _settingsSelected = 0;
           break;
         case 'Save Game':
           if (typeof SaveSystem !== 'undefined') {
@@ -544,6 +543,7 @@ const Menus = (() => {
           }
           break;
         case 'Quit to Title':
+          _subScreen = null;
           Core.setState(GameStates.MENU);
           _titleSelected = 0;
           break;
@@ -555,48 +555,650 @@ const Menus = (() => {
     }
   }
 
+  function updateSubScreen(dt) {
+    if (Input.actionPressed(Input.Actions.CANCEL)) {
+      _subScreen = null;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
+      return;
+    }
+
+    switch (_subScreen) {
+      case 'settings': updateSettings(); break;
+      case 'achievements': updateAchievements(); break;
+      case 'bestiary': updateBestiary(); break;
+      case 'dailies': updateDailies(); break;
+      case 'pets': updatePets(); break;
+    }
+  }
+
   function renderPause() {
     const w = Renderer.getWidth();
     const h = Renderer.getHeight();
     const ctx = Renderer.getCtx();
 
-    // Blurred dim background
+    // Sub-screen rendering
+    if (_subScreen) {
+      Renderer.drawRect(0, 0, w, h, 'rgba(4,4,12,0.85)');
+      switch (_subScreen) {
+        case 'settings': renderSettings(w, h, ctx); break;
+        case 'achievements': renderAchievements(w, h, ctx); break;
+        case 'bestiary': renderBestiary(w, h, ctx); break;
+        case 'dailies': renderDailies(w, h, ctx); break;
+        case 'pets': renderPets(w, h, ctx); break;
+      }
+      return;
+    }
+
     Renderer.drawRect(0, 0, w, h, 'rgba(4,4,12,0.7)');
 
-    // Panel
-    const pw = 320, ph = pauseOptions.length * 38 + 70;
+    const pw = 320, ph = pauseOptions.length * 34 + 60;
     const px = (w - pw) / 2, py = (h - ph) / 2;
     Renderer.drawPanel(px, py, pw, ph, 'rgba(8,8,24,0.95)', '#2a2a40');
 
-    // Header
     Renderer.drawText('PAUSED', w / 2, py + 18, '#f0c040', 22, 'center', true);
 
-    // Divider
     ctx.strokeStyle = '#2a2a40';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(px + 20, py + 40);
-    ctx.lineTo(px + pw - 20, py + 40);
+    ctx.moveTo(px + 20, py + 38);
+    ctx.lineTo(px + pw - 20, py + 38);
     ctx.stroke();
 
     for (let i = 0; i < pauseOptions.length; i++) {
       const sel = i === _pauseSelected;
-      const y = py + 52 + i * 36;
+      const y = py + 48 + i * 32;
 
       if (sel) {
-        // Highlight bar
         ctx.fillStyle = 'rgba(240,192,64,0.08)';
-        ctx.fillRect(px + 10, y - 4, pw - 20, 28);
+        ctx.fillRect(px + 10, y - 4, pw - 20, 26);
       }
 
       const color = sel ? '#f0c040' : '#7a7a90';
       const prefix = sel ? '\u25B6 ' : '   ';
-      Renderer.drawText(prefix + pauseOptions[i], px + 30, y, color, sel ? 16 : 15);
+      Renderer.drawText(prefix + pauseOptions[i], px + 30, y, color, sel ? 15 : 14);
     }
+  }
+
+  // ======== SETTINGS ========
+  function updateSettings() {
+    if (Input.actionPressed(Input.Actions.UP)) {
+      _settingsSelected = (_settingsSelected - 1 + settingsItems.length) % settingsItems.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+    if (Input.actionPressed(Input.Actions.DOWN)) {
+      _settingsSelected = (_settingsSelected + 1) % settingsItems.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    const wheel = Input.getWheelDelta();
+    if (wheel !== 0) {
+      _settingsSelected = (_settingsSelected + Math.sign(wheel) + settingsItems.length) % settingsItems.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    const item = settingsItems[_settingsSelected];
+    if (Input.actionPressed(Input.Actions.CONFIRM)) {
+      if (item === 'Back') {
+        _subScreen = null;
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
+      } else if (item === 'Show FPS') {
+        GS.settings.showFPS = !GS.settings.showFPS;
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
+      } else if (item === 'Difficulty') {
+        const diffs = ['easy', 'normal', 'hard', 'nightmare'];
+        const cur = diffs.indexOf(GS.difficulty || 'normal');
+        GS.difficulty = diffs[(cur + 1) % diffs.length];
+        if (typeof NewGamePlus !== 'undefined') NewGamePlus.setDifficulty(GS.difficulty);
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
+      }
+    }
+
+    // LEFT/RIGHT for volume sliders
+    if (Input.actionPressed(Input.Actions.LEFT) || Input.actionPressed(Input.Actions.RIGHT)) {
+      const dir = Input.actionPressed(Input.Actions.RIGHT) ? 0.1 : -0.1;
+      if (item === 'Music Volume') {
+        GS.settings.musicVolume = Utils.clamp((GS.settings.musicVolume || 0.3) + dir, 0, 1);
+        if (typeof AudioManager !== 'undefined') AudioManager.setMusicVolume(GS.settings.musicVolume);
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+      } else if (item === 'SFX Volume') {
+        GS.settings.sfxVolume = Utils.clamp((GS.settings.sfxVolume || 0.5) + dir, 0, 1);
+        if (typeof AudioManager !== 'undefined') AudioManager.setSFXVolume(GS.settings.sfxVolume);
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+      } else if (item === 'Difficulty') {
+        const diffs = ['easy', 'normal', 'hard', 'nightmare'];
+        const cur = diffs.indexOf(GS.difficulty || 'normal');
+        GS.difficulty = diffs[(cur + (dir > 0 ? 1 : diffs.length - 1)) % diffs.length];
+        if (typeof NewGamePlus !== 'undefined') NewGamePlus.setDifficulty(GS.difficulty);
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+      }
+    }
+  }
+
+  function renderSettings(w, h, ctx) {
+    const pw = 420, ph = 280;
+    const px = (w - pw) / 2, py = (h - ph) / 2;
+    Renderer.drawPanel(px, py, pw, ph, 'rgba(8,8,24,0.95)', '#2a2a40');
+
+    Renderer.drawText('SETTINGS', w / 2, py + 18, '#f0c040', 22, 'center', true);
+
+    ctx.strokeStyle = '#2a2a40';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px + 20, py + 38);
+    ctx.lineTo(px + pw - 20, py + 38);
+    ctx.stroke();
+
+    for (let i = 0; i < settingsItems.length; i++) {
+      const sel = i === _settingsSelected;
+      const y = py + 55 + i * 40;
+      const item = settingsItems[i];
+
+      if (sel) {
+        ctx.fillStyle = 'rgba(240,192,64,0.08)';
+        ctx.fillRect(px + 10, y - 6, pw - 20, 32);
+      }
+
+      const color = sel ? '#f0c040' : '#7a7a90';
+      Renderer.drawText(item, px + 30, y, color, 14);
+
+      // Value display
+      if (item === 'Music Volume') {
+        const vol = Math.round((GS.settings.musicVolume || 0.3) * 100);
+        drawSlider(ctx, px + 200, y + 2, 160, vol, sel);
+      } else if (item === 'SFX Volume') {
+        const vol = Math.round((GS.settings.sfxVolume || 0.5) * 100);
+        drawSlider(ctx, px + 200, y + 2, 160, vol, sel);
+      } else if (item === 'Difficulty') {
+        const diffNames = { easy: 'Easy', normal: 'Normal', hard: 'Hard', nightmare: 'Nightmare' };
+        const diffColors = { easy: '#4a4', normal: '#aaa', hard: '#f80', nightmare: '#f44' };
+        const d = GS.difficulty || 'normal';
+        Renderer.drawText(`< ${diffNames[d]} >`, px + pw - 40, y, diffColors[d], 14, 'right');
+      } else if (item === 'Show FPS') {
+        Renderer.drawText(GS.settings.showFPS ? 'ON' : 'OFF', px + pw - 40, y, GS.settings.showFPS ? '#4a4' : '#666', 14, 'right');
+      } else if (item === 'Back') {
+        // Just the label
+      }
+    }
+
+    Renderer.drawText('\u2191\u2193 Navigate | \u2190\u2192 Adjust | ENTER Select | ESC Back', w / 2, py + ph - 18, '#4a4a60', 10, 'center');
+  }
+
+  function drawSlider(ctx, x, y, width, percent, active) {
+    // Track
+    ctx.fillStyle = '#1a1a30';
+    ctx.fillRect(x, y, width, 10);
+    // Fill
+    const fillW = width * (percent / 100);
+    ctx.fillStyle = active ? '#f0c040' : '#806020';
+    ctx.fillRect(x, y, fillW, 10);
+    // Border
+    ctx.strokeStyle = active ? '#f0c040' : '#3a3a50';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, width, 10);
+    // Value text
+    Renderer.drawText(`${percent}%`, x + width + 10, y - 2, active ? '#f0c040' : '#7a7a90', 12);
+  }
+
+  // ======== ACHIEVEMENTS SCREEN ========
+  function updateAchievements() {
+    if (typeof Achievements === 'undefined') return;
+    const all = Achievements.getAll();
+
+    if (Input.actionPressed(Input.Actions.UP)) {
+      _subSelected = (_subSelected - 1 + all.length) % all.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+    if (Input.actionPressed(Input.Actions.DOWN)) {
+      _subSelected = (_subSelected + 1) % all.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    const wheel = Input.getWheelDelta();
+    if (wheel !== 0) {
+      _subSelected = (_subSelected + Math.sign(wheel) + all.length) % all.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+  }
+
+  function renderAchievements(w, h, ctx) {
+    if (typeof Achievements === 'undefined') return;
+
+    const all = Achievements.getAll();
+    const unlocked = Achievements.getUnlockedCount();
+    const total = Achievements.getTotalCount();
+
+    const pw = Math.min(w - 60, 500), ph = h - 80;
+    const px = (w - pw) / 2, py = 40;
+    Renderer.drawPanel(px, py, pw, ph, 'rgba(8,8,24,0.95)', '#2a2a40');
+
+    // Header
+    Renderer.drawText('ACHIEVEMENTS', w / 2, py + 18, '#f0c040', 22, 'center', true);
+    Renderer.drawText(`${unlocked} / ${total} Unlocked`, w / 2, py + 40, '#888', 12, 'center');
+
+    // Progress bar
+    const barX = px + 40, barY = py + 55, barW = pw - 80;
+    ctx.fillStyle = '#1a1a30';
+    ctx.fillRect(barX, barY, barW, 8);
+    ctx.fillStyle = '#f0c040';
+    ctx.fillRect(barX, barY, barW * (unlocked / Math.max(1, total)), 8);
+    ctx.strokeStyle = '#3a3a50';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, 8);
+
+    // Achievement list
+    const listY = py + 75;
+    const itemH = 44;
+    const maxShow = Math.floor((ph - 100) / itemH);
+    const scrollOff = Math.max(0, _subSelected - maxShow + 3);
+
+    for (let i = scrollOff; i < all.length && i < scrollOff + maxShow; i++) {
+      const ach = all[i];
+      const sel = i === _subSelected;
+      const y = listY + (i - scrollOff) * itemH;
+
+      if (sel) {
+        ctx.fillStyle = 'rgba(240,192,64,0.06)';
+        ctx.fillRect(px + 10, y - 2, pw - 20, itemH - 4);
+      }
+
+      // Icon
+      const iconColor = ach.unlocked ? '#f0c040' : '#333';
+      const iconText = ach.unlocked ? '\u2605' : (ach.secret && !ach.unlocked ? '?' : '\u2606');
+      Renderer.drawText(iconText, px + 30, y + 4, iconColor, 18);
+
+      // Name
+      const nameColor = ach.unlocked ? (sel ? '#f0c040' : '#ddd') : (sel ? '#666' : '#444');
+      const name = (ach.secret && !ach.unlocked) ? '???' : ach.name;
+      Renderer.drawText(name, px + 55, y + 4, nameColor, 14, 'left', sel && ach.unlocked);
+
+      // Description
+      const desc = (ach.secret && !ach.unlocked) ? 'Secret achievement' : ach.desc;
+      Renderer.drawText(desc, px + 55, y + 22, ach.unlocked ? '#888' : '#444', 11);
+
+      // Status
+      if (ach.unlocked) {
+        Renderer.drawText('\u2713', px + pw - 30, y + 10, '#4a4', 16);
+      }
+    }
+
+    Renderer.drawText('ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
+  }
+
+  // ======== BESTIARY SCREEN ========
+  function updateBestiary() {
+    if (typeof Bestiary === 'undefined') return;
+    const entries = getBestiaryEntries();
+
+    if (entries.length === 0) return;
+
+    if (Input.actionPressed(Input.Actions.UP)) {
+      _subSelected = (_subSelected - 1 + entries.length) % entries.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+    if (Input.actionPressed(Input.Actions.DOWN)) {
+      _subSelected = (_subSelected + 1) % entries.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    const wheel = Input.getWheelDelta();
+    if (wheel !== 0) {
+      _subSelected = (_subSelected + Math.sign(wheel) + entries.length) % entries.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+  }
+
+  function getBestiaryEntries() {
+    if (typeof Enemies === 'undefined') return [];
+    const allEnemies = Enemies.getAllEnemies ? Enemies.getAllEnemies() : [];
+    const bestiary = GS.bestiary || {};
+
+    return allEnemies.map(e => ({
+      ...e,
+      discovered: !!bestiary[e.type],
+      killCount: bestiary[e.type]?.kills || 0
+    }));
+  }
+
+  function renderBestiary(w, h, ctx) {
+    const entries = getBestiaryEntries();
+    const discovered = entries.filter(e => e.discovered).length;
+
+    const pw = Math.min(w - 60, 520), ph = h - 80;
+    const px = (w - pw) / 2, py = 40;
+    Renderer.drawPanel(px, py, pw, ph, 'rgba(8,8,24,0.95)', '#2a2a40');
+
+    Renderer.drawText('BESTIARY', w / 2, py + 18, '#f0c040', 22, 'center', true);
+    Renderer.drawText(`${discovered} / ${entries.length} Discovered`, w / 2, py + 40, '#888', 12, 'center');
+
+    // Progress bar
+    const barX = px + 40, barY = py + 55, barW = pw - 80;
+    ctx.fillStyle = '#1a1a30';
+    ctx.fillRect(barX, barY, barW, 8);
+    ctx.fillStyle = '#f44';
+    ctx.fillRect(barX, barY, barW * (discovered / Math.max(1, entries.length)), 8);
+
+    if (entries.length === 0) {
+      Renderer.drawText('No enemies encountered yet.', w / 2, h / 2, '#666', 14, 'center');
+      Renderer.drawText('ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
+      return;
+    }
+
+    // Enemy list (left) + details (right)
+    const listY = py + 75;
+    const itemH = 28;
+    const maxShow = Math.floor((ph - 160) / itemH);
+    const scrollOff = Math.max(0, _subSelected - maxShow + 3);
+    const splitX = px + pw * 0.45;
+
+    // List
+    for (let i = scrollOff; i < entries.length && i < scrollOff + maxShow; i++) {
+      const entry = entries[i];
+      const sel = i === _subSelected;
+      const y = listY + (i - scrollOff) * itemH;
+
+      if (sel) {
+        ctx.fillStyle = 'rgba(240,192,64,0.06)';
+        ctx.fillRect(px + 10, y - 2, splitX - px - 20, itemH - 2);
+      }
+
+      const name = entry.discovered ? entry.name : '???';
+      const color = sel ? '#f0c040' : (entry.discovered ? '#bbb' : '#444');
+      Renderer.drawText(name, px + 25, y + 2, color, 12);
+
+      if (entry.discovered) {
+        Renderer.drawText(`x${entry.killCount}`, splitX - 35, y + 2, '#666', 10, 'right');
+      }
+    }
+
+    // Details panel
+    ctx.strokeStyle = '#2a2a40';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(splitX, listY - 5);
+    ctx.lineTo(splitX, py + ph - 35);
+    ctx.stroke();
+
+    if (_subSelected < entries.length) {
+      const entry = entries[_subSelected];
+      const dx = splitX + 15;
+
+      if (entry.discovered) {
+        Renderer.drawText(entry.name, dx, listY, '#f0c040', 16, 'left', true);
+        Renderer.drawText(`Level: ${entry.level || '?'}`, dx, listY + 24, '#aaa', 12);
+        Renderer.drawText(`Kills: ${entry.killCount}`, dx, listY + 42, '#aaa', 12);
+
+        if (entry.element) Renderer.drawText(`Element: ${entry.element}`, dx, listY + 60, '#88f', 11);
+        if (entry.weakness) Renderer.drawText(`Weak to: ${entry.weakness}`, dx, listY + 76, '#f88', 11);
+        if (entry.resistance) Renderer.drawText(`Resists: ${entry.resistance}`, dx, listY + 92, '#8f8', 11);
+
+        // Stats preview
+        let sy = listY + 114;
+        if (entry.stats) {
+          const st = entry.stats;
+          Renderer.drawText(`HP: ${st.maxHp || '?'}  STR: ${st.str || '?'}`, dx, sy, '#777', 10);
+          Renderer.drawText(`DEF: ${st.def || '?'}  AGI: ${st.agi || '?'}`, dx, sy + 16, '#777', 10);
+        }
+
+        // Loot hints
+        if (entry.lootTable && entry.lootTable.length > 0) {
+          Renderer.drawText('Drops:', dx, sy + 38, '#888', 11);
+          for (let l = 0; l < Math.min(3, entry.lootTable.length); l++) {
+            const drop = entry.lootTable[l];
+            const rColor = Items.getRarityColor(drop.rarity);
+            Renderer.drawText(`${drop.rarity} gear (${Math.round(drop.chance * 100)}%)`, dx + 10, sy + 54 + l * 14, rColor, 10);
+          }
+        }
+      } else {
+        Renderer.drawText('???', dx, listY, '#444', 16);
+        Renderer.drawText('Not yet encountered.', dx, listY + 24, '#444', 12);
+        Renderer.drawText('Defeat this enemy to', dx, listY + 42, '#444', 11);
+        Renderer.drawText('discover its secrets.', dx, listY + 56, '#444', 11);
+      }
+    }
+
+    Renderer.drawText('ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
+  }
+
+  // ======== DAILY CHALLENGES SCREEN ========
+  function updateDailies() {
+    if (typeof DailyChallenges === 'undefined') return;
+    const challenges = GS.dailyChallenges?.challenges || [];
+
+    if (challenges.length === 0) return;
+
+    if (Input.actionPressed(Input.Actions.UP)) {
+      _subSelected = (_subSelected - 1 + challenges.length) % challenges.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+    if (Input.actionPressed(Input.Actions.DOWN)) {
+      _subSelected = (_subSelected + 1) % challenges.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    const wheel = Input.getWheelDelta();
+    if (wheel !== 0) {
+      _subSelected = (_subSelected + Math.sign(wheel) + challenges.length) % challenges.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    // Claim reward
+    if (Input.actionPressed(Input.Actions.CONFIRM)) {
+      const ch = challenges[_subSelected];
+      if (ch && ch.progress >= ch.target && !ch.claimed) {
+        if (typeof DailyChallenges !== 'undefined') {
+          DailyChallenges.claimReward(_subSelected);
+          if (typeof AudioManager !== 'undefined') AudioManager.playSFX('coin');
+        }
+      }
+    }
+  }
+
+  function renderDailies(w, h, ctx) {
+    const pw = Math.min(w - 60, 460), ph = 360;
+    const px = (w - pw) / 2, py = (h - ph) / 2;
+    Renderer.drawPanel(px, py, pw, ph, 'rgba(8,8,24,0.95)', '#2a2a40');
+
+    const streak = GS.dailyChallenges?.streak || 0;
+    const totalDone = GS.dailyChallenges?.totalCompleted || 0;
+    Renderer.drawText('DAILY CHALLENGES', w / 2, py + 18, '#f0c040', 22, 'center', true);
+    Renderer.drawText(`Streak: ${streak} days | Total: ${totalDone}`, w / 2, py + 40, '#888', 12, 'center');
+
+    const challenges = GS.dailyChallenges?.challenges || [];
+
+    if (challenges.length === 0) {
+      Renderer.drawText('No challenges active.', w / 2, py + ph / 2, '#666', 14, 'center');
+      Renderer.drawText('Challenges refresh daily.', w / 2, py + ph / 2 + 20, '#444', 12, 'center');
+      Renderer.drawText('ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
+      return;
+    }
+
+    const startY = py + 65;
+    const cardH = 70;
+
+    for (let i = 0; i < challenges.length; i++) {
+      const ch = challenges[i];
+      const sel = i === _subSelected;
+      const y = startY + i * cardH;
+      const complete = ch.progress >= ch.target;
+
+      // Card
+      if (sel) {
+        ctx.fillStyle = 'rgba(240,192,64,0.06)';
+        ctx.fillRect(px + 10, y, pw - 20, cardH - 6);
+      }
+      Renderer.drawPanel(px + 15, y, pw - 30, cardH - 8, complete ? 'rgba(20,40,20,0.8)' : 'rgba(16,16,32,0.7)', sel ? '#f0c040' : '#1e1e30');
+
+      // Description
+      const desc = ch.desc || 'Challenge';
+      const nameColor = sel ? '#f0c040' : (complete ? '#4a4' : '#ccc');
+      Renderer.drawText(desc, px + 30, y + 8, nameColor, 13);
+
+      // Progress bar
+      const barX = px + 30, barY2 = y + 28, barW = pw - 120;
+      const pct = Math.min(1, ch.progress / Math.max(1, ch.target));
+      ctx.fillStyle = '#1a1a30';
+      ctx.fillRect(barX, barY2, barW, 10);
+      ctx.fillStyle = complete ? '#4a4' : '#f0c040';
+      ctx.fillRect(barX, barY2, barW * pct, 10);
+      ctx.strokeStyle = '#3a3a50';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, barY2, barW, 10);
+
+      // Progress text
+      Renderer.drawText(`${ch.progress}/${ch.target}`, barX + barW + 8, barY2 - 2, '#aaa', 11);
+
+      // Reward
+      const reward = ch.reward || {};
+      let rewardText = '';
+      if (reward.gold) rewardText += `${reward.gold}g `;
+      if (reward.xp) rewardText += `${reward.xp}xp`;
+      Renderer.drawText(rewardText, px + pw - 30, y + 8, '#888', 10, 'right');
+
+      // Claim button
+      if (complete && !ch.claimed) {
+        const btnColor = sel ? '#f0c040' : '#806020';
+        Renderer.drawText('[CLAIM]', px + pw - 30, barY2 - 2, btnColor, 11, 'right');
+      } else if (ch.claimed) {
+        Renderer.drawText('CLAIMED', px + pw - 30, barY2 - 2, '#4a4', 10, 'right');
+      }
+    }
+
+    Renderer.drawText('ENTER to claim | ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
+  }
+
+  // ======== PETS SCREEN ========
+  function updatePets() {
+    const pets = GS.player?.pets || [];
+    if (pets.length === 0) return;
+
+    if (Input.actionPressed(Input.Actions.UP)) {
+      _subSelected = (_subSelected - 1 + pets.length) % pets.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+    if (Input.actionPressed(Input.Actions.DOWN)) {
+      _subSelected = (_subSelected + 1) % pets.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    const wheel = Input.getWheelDelta();
+    if (wheel !== 0) {
+      _subSelected = (_subSelected + Math.sign(wheel) + pets.length) % pets.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    if (Input.actionPressed(Input.Actions.CONFIRM)) {
+      const pet = pets[_subSelected];
+      if (pet && typeof Pets !== 'undefined') {
+        Pets.setActivePet(pet.id);
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
+      }
+    }
+  }
+
+  function renderPets(w, h, ctx) {
+    const pets = GS.player?.pets || [];
+    const activePet = GS.player?.activePet;
+
+    const pw = Math.min(w - 60, 480), ph = h - 80;
+    const px = (w - pw) / 2, py = 40;
+    Renderer.drawPanel(px, py, pw, ph, 'rgba(8,8,24,0.95)', '#2a2a40');
+
+    Renderer.drawText('PET COMPANIONS', w / 2, py + 18, '#f0c040', 22, 'center', true);
+    Renderer.drawText(`${pets.length} Collected | Active: ${activePet ? activePet.name : 'None'}`, w / 2, py + 40, '#888', 12, 'center');
+
+    if (pets.length === 0) {
+      Renderer.drawText('No pets collected yet.', w / 2, h / 2 - 10, '#666', 14, 'center');
+      Renderer.drawText('Defeat enemies for a chance', w / 2, h / 2 + 10, '#444', 12, 'center');
+      Renderer.drawText('to capture pet companions!', w / 2, h / 2 + 26, '#444', 12, 'center');
+      Renderer.drawText('ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
+      return;
+    }
+
+    const listY = py + 60;
+    const splitX = px + pw * 0.45;
+    const itemH = 32;
+    const maxShow = Math.floor((ph - 100) / itemH);
+    const scrollOff = Math.max(0, _subSelected - maxShow + 3);
+
+    // Pet list
+    for (let i = scrollOff; i < pets.length && i < scrollOff + maxShow; i++) {
+      const pet = pets[i];
+      const sel = i === _subSelected;
+      const y = listY + (i - scrollOff) * itemH;
+      const isActive = activePet && activePet.id === pet.id;
+
+      if (sel) {
+        ctx.fillStyle = 'rgba(240,192,64,0.06)';
+        ctx.fillRect(px + 10, y - 2, splitX - px - 20, itemH - 2);
+      }
+
+      const rarityColors = { common: '#aaa', uncommon: '#5c5', rare: '#55f', epic: '#a5f', legendary: '#fa0' };
+      const color = sel ? '#f0c040' : (rarityColors[pet.rarity] || '#aaa');
+      const prefix = isActive ? '\u2605 ' : '  ';
+      Renderer.drawText(prefix + pet.name, px + 20, y + 2, color, 13);
+      Renderer.drawText(`Lv.${pet.level}`, splitX - 30, y + 2, '#666', 10, 'right');
+    }
+
+    // Details
+    ctx.strokeStyle = '#2a2a40';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(splitX, listY - 5);
+    ctx.lineTo(splitX, py + ph - 35);
+    ctx.stroke();
+
+    if (_subSelected < pets.length) {
+      const pet = pets[_subSelected];
+      const dx = splitX + 15;
+      const isActive = activePet && activePet.id === pet.id;
+
+      const rarityColors = { common: '#aaa', uncommon: '#5c5', rare: '#55f', epic: '#a5f', legendary: '#fa0' };
+      Renderer.drawText(pet.name, dx, listY, '#f0c040', 16, 'left', true);
+      Renderer.drawText(`${pet.rarity.toUpperCase()} | ${pet.element}`, dx, listY + 22, rarityColors[pet.rarity] || '#aaa', 11);
+      Renderer.drawText(`Level ${pet.level}  (${pet.xp}/${pet.xpToNext} XP)`, dx, listY + 40, '#aaa', 11);
+
+      // XP bar
+      const xpPct = pet.xp / Math.max(1, pet.xpToNext);
+      ctx.fillStyle = '#1a1a30';
+      ctx.fillRect(dx, listY + 55, 120, 6);
+      ctx.fillStyle = '#f0c040';
+      ctx.fillRect(dx, listY + 55, 120 * xpPct, 6);
+
+      // Passive bonuses
+      Renderer.drawText('Passive Bonuses:', dx, listY + 72, '#888', 11);
+      let py2 = listY + 88;
+      if (pet.passive) {
+        for (const [stat, val] of Object.entries(pet.passive)) {
+          Renderer.drawText(`${stat.toUpperCase()}: +${val}`, dx + 10, py2, '#6a6', 11);
+          py2 += 14;
+        }
+      }
+
+      // Combat bonus
+      if (pet.combatBonus) {
+        Renderer.drawText('Combat:', dx, py2 + 4, '#888', 11);
+        const cb = pet.combatBonus;
+        let cbText = cb.type;
+        if (cb.element) cbText += ` (${cb.element})`;
+        if (cb.amount) cbText += `: +${cb.amount}`;
+        if (cb.chance) cbText += ` ${Math.round(cb.chance * 100)}%`;
+        Renderer.drawText(cbText, dx + 10, py2 + 18, '#88f', 10);
+      }
+
+      // Active indicator
+      if (isActive) {
+        Renderer.drawText('\u2605 ACTIVE PET', dx, py2 + 40, '#f0c040', 12);
+      } else {
+        Renderer.drawText('ENTER to set active', dx, py2 + 40, '#666', 11);
+      }
+    }
+
+    Renderer.drawText('ENTER set active | ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
   }
 
   // ======== GAME OVER ========
   function updateGameOver(dt) {
+    _titleAnim += dt;
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
       Core.setState(GameStates.MENU);
       _titleSelected = 0;
@@ -608,14 +1210,12 @@ const Menus = (() => {
     const h = Renderer.getHeight();
     const ctx = Renderer.getCtx();
 
-    // Dark red gradient
     const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.6);
     grad.addColorStop(0, 'rgba(40,5,5,0.95)');
     grad.addColorStop(1, 'rgba(10,0,0,0.98)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Shadow text
     ctx.globalAlpha = 0.3;
     Renderer.drawText('GAME OVER', w / 2 + 3, h / 2 - 27, '#000', 52, 'center', true);
     ctx.globalAlpha = 1;
@@ -627,9 +1227,28 @@ const Menus = (() => {
 
   // ======== VICTORY ========
   function updateVictory(dt) {
+    _titleAnim += dt;
+
+    if (Input.actionPressed(Input.Actions.UP)) {
+      _subSelected = Math.max(0, _subSelected - 1);
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+    if (Input.actionPressed(Input.Actions.DOWN)) {
+      _subSelected = Math.min(1, _subSelected + 1);
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
-      Core.setState(GameStates.MENU);
-      _titleSelected = 0;
+      if (_subSelected === 0 && typeof NewGamePlus !== 'undefined') {
+        // Start NG+
+        NewGamePlus.startNewGamePlus();
+        Core.setState(GameStates.PLAY);
+        _subSelected = 0;
+      } else {
+        Core.setState(GameStates.MENU);
+        _titleSelected = 0;
+        _subSelected = 0;
+      }
     }
   }
 
@@ -638,7 +1257,6 @@ const Menus = (() => {
     const h = Renderer.getHeight();
     const ctx = Renderer.getCtx();
 
-    // Golden radial gradient
     const grad = ctx.createRadialGradient(w / 2, h * 0.3, 0, w / 2, h * 0.3, w * 0.7);
     grad.addColorStop(0, '#1a1808');
     grad.addColorStop(0.5, '#0e0c06');
@@ -646,7 +1264,7 @@ const Menus = (() => {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Floating golden particles
+    // Floating particles
     const rng = Utils.mulberry32(77);
     for (let i = 0; i < 30; i++) {
       const px = rng() * w;
@@ -660,42 +1278,50 @@ const Menus = (() => {
 
     const pulse = Math.sin(GS.time * 2) * 3;
 
-    // Shadow
     ctx.globalAlpha = 0.3;
-    Renderer.drawText('THE REALM IS SAVED', w / 2 + 2, h * 0.25 + pulse + 2, '#000', 44, 'center', true);
+    Renderer.drawText('THE REALM IS SAVED', w / 2 + 2, h * 0.2 + pulse + 2, '#000', 44, 'center', true);
     ctx.globalAlpha = 1;
 
-    Renderer.drawText('THE REALM IS SAVED', w / 2, h * 0.25 + pulse, '#f0c040', 44, 'center', true);
+    Renderer.drawText('THE REALM IS SAVED', w / 2, h * 0.2 + pulse, '#f0c040', 44, 'center', true);
 
-    // Decorative line
     ctx.strokeStyle = '#806020';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(w / 2 - 140, h * 0.25 + 25);
-    ctx.lineTo(w / 2 + 140, h * 0.25 + 25);
+    ctx.moveTo(w / 2 - 140, h * 0.2 + 25);
+    ctx.lineTo(w / 2 + 140, h * 0.2 + 25);
     ctx.stroke();
 
-    Renderer.drawText('You have defeated the Crystal Dragon', w / 2, h * 0.35, '#c0c0d0', 16, 'center');
-    Renderer.drawText('and cleansed the corrupted crystals.', w / 2, h * 0.35 + 24, '#c0c0d0', 16, 'center');
+    Renderer.drawText('You have defeated the Crystal Dragon', w / 2, h * 0.3, '#c0c0d0', 16, 'center');
+    Renderer.drawText('and cleansed the corrupted crystals.', w / 2, h * 0.3 + 24, '#c0c0d0', 16, 'center');
 
-    // Stats panel
+    // Stats
     if (GS.player) {
       const stats = GS.player.stats;
       const mins = Math.floor((GS.playTime || 0) / 60);
-      const statY = h * 0.5;
+      const achCount = GS.achievements ? GS.achievements.length : 0;
+      const statY = h * 0.42;
 
-      Renderer.drawPanel(w / 2 - 160, statY - 10, 320, 110, 'rgba(16,16,32,0.8)', '#2a2a40');
+      Renderer.drawPanel(w / 2 - 160, statY - 10, 320, 130, 'rgba(16,16,32,0.8)', '#2a2a40');
       Renderer.drawText('FINAL STATS', w / 2, statY, '#f0c040', 14, 'center', true);
-      Renderer.drawText(`Level: ${stats.level}`, w / 2, statY + 25, '#c0c0d0', 14, 'center');
-      Renderer.drawText(`Bosses Defeated: ${GS.defeatedBosses ? GS.defeatedBosses.length : 0}`, w / 2, statY + 45, '#c0c0d0', 14, 'center');
-      Renderer.drawText(`Play Time: ${mins} minutes`, w / 2, statY + 65, '#c0c0d0', 14, 'center');
-      Renderer.drawText(`Gold Earned: ${stats.gold}`, w / 2, statY + 85, '#c0c0d0', 14, 'center');
+      Renderer.drawText(`Level: ${stats.level}`, w / 2, statY + 22, '#c0c0d0', 14, 'center');
+      Renderer.drawText(`Bosses Defeated: ${GS.defeatedBosses ? GS.defeatedBosses.length : 0}`, w / 2, statY + 40, '#c0c0d0', 14, 'center');
+      Renderer.drawText(`Achievements: ${achCount}`, w / 2, statY + 58, '#c0c0d0', 14, 'center');
+      Renderer.drawText(`Play Time: ${mins} minutes`, w / 2, statY + 76, '#c0c0d0', 14, 'center');
+      Renderer.drawText(`Gold: ${GS.player.gold || 0}`, w / 2, statY + 94, '#c0c0d0', 14, 'center');
     }
 
-    Renderer.drawText('Press ENTER to return to title', w / 2, h * 0.82, '#4a4a60', 13, 'center');
-    Renderer.drawText('Thank you for playing Realm Engine!', w / 2, h * 0.87, '#3a3a50', 12, 'center');
+    // NG+ option
+    const optY = h * 0.78;
+    const opts = ['Start New Game+', 'Return to Title'];
+    for (let i = 0; i < opts.length; i++) {
+      const sel = i === _subSelected;
+      Renderer.drawText((sel ? '> ' : '  ') + opts[i], w / 2, optY + i * 30, sel ? '#f0c040' : '#888', sel ? 18 : 16, 'center', sel);
+    }
+
+    Renderer.drawText('Thank you for playing Realm Engine!', w / 2, h * 0.93, '#3a3a50', 12, 'center');
   }
 
+  // ======== RENDER ========
   function render() {
     switch (GS.state) {
       case GameStates.MENU: renderTitle(); break;

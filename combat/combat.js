@@ -26,6 +26,35 @@ const Combat = (() => {
   let _lastDamageType = null;
   let _playerDamageTaken = 0;
 
+  // Floating damage numbers
+  const _floatingNumbers = [];
+  function addFloatingNumber(x, y, text, color, size) {
+    _floatingNumbers.push({ x, y, text: String(text), color: color || '#fff', size: size || 18, life: 1.2, maxLife: 1.2 });
+  }
+  function updateFloatingNumbers(dt) {
+    for (let i = _floatingNumbers.length - 1; i >= 0; i--) {
+      const fn = _floatingNumbers[i];
+      fn.life -= dt;
+      fn.y -= 40 * dt;
+      if (fn.life <= 0) _floatingNumbers.splice(i, 1);
+    }
+  }
+  function renderFloatingNumbers() {
+    const ctx = Renderer.getCtx();
+    for (const fn of _floatingNumbers) {
+      const alpha = Math.min(1, fn.life / (fn.maxLife * 0.3));
+      const scale = fn.life > fn.maxLife * 0.8 ? 1 + (fn.life - fn.maxLife * 0.8) / (fn.maxLife * 0.2) * 0.3 : 1;
+      ctx.globalAlpha = alpha;
+      ctx.font = `bold ${Math.floor(fn.size * scale)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#000';
+      ctx.fillText(fn.text, fn.x + 1, fn.y + 1);
+      ctx.fillStyle = fn.color;
+      ctx.fillText(fn.text, fn.x, fn.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   const actions = ['Attack', 'Skills', 'Items', 'Defend', 'Flee'];
 
   function startCombat(enemyOrEnemies) {
@@ -81,6 +110,7 @@ const Combat = (() => {
     _comboCounter = 0;
     _lastDamageType = null;
     _playerDamageTaken = 0;
+    _floatingNumbers.length = 0;
 
     // Build turn order by AGI (all combatants)
     buildTurnOrder();
@@ -192,8 +222,18 @@ const Combat = (() => {
   }
 
   function applyDamage(target, dmg) {
+    const wasDead = target.hp <= 0;
     target.hp = Math.max(0, target.hp - dmg);
     if (target === GS.player.stats) _playerDamageTaken += dmg;
+    if (!wasDead && target.hp <= 0) {
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('death');
+      if (typeof Particles !== 'undefined') {
+        const w = Renderer.getWidth();
+        const h = Renderer.getHeight();
+        const isEnemy = target !== GS.player.stats;
+        Particles.emit('death', isEnemy ? w * 0.65 : w * 0.15, h * 0.4, 20);
+      }
+    }
   }
 
   function applyHeal(target, amount) {
@@ -224,10 +264,12 @@ const Combat = (() => {
     applyDamage(target.stats, dmg);
     addLog(`You attack ${target.name} for ${dmg}!${crit ? ' CRIT!' : ''}`);
     _shakeTimer = 0.3;
-    if (typeof AudioManager !== 'undefined') AudioManager.playSFX('hit');
+    if (typeof AudioManager !== 'undefined') AudioManager.playSFX(crit ? 'critical' : 'hit');
+    const ex = getEnemyScreenX(getLiveEnemies().indexOf(target));
+    const ey = Renderer.getHeight() * 0.35;
+    addFloatingNumber(ex, ey, crit ? `${dmg} CRIT!` : dmg, crit ? '#ff0' : '#fff', crit ? 24 : 18);
     if (typeof Particles !== 'undefined') {
-      const ex = getEnemyScreenX(getLiveEnemies().indexOf(target));
-      Particles.emit('hit', ex, Renderer.getHeight() * 0.4, 10);
+      Particles.emit(crit ? 'critical' : 'hit', ex, Renderer.getHeight() * 0.4, crit ? 20 : 10);
     }
     checkCombatEnd();
   }
@@ -267,6 +309,7 @@ const Combat = (() => {
       if (skill.targetType === 'all_allies') {
         applyHeal(GS.player.stats, healAmt);
         addLog(`${skill.name}: You heal ${healAmt} HP!`);
+        addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.35, `+${healAmt}`, '#0f0', 20);
         for (const ally of getLiveAllies()) {
           applyHeal(ally.stats, Math.floor(healAmt * 0.7));
           addLog(`${ally.name} heals ${Math.floor(healAmt * 0.7)} HP!`);
@@ -274,6 +317,7 @@ const Combat = (() => {
       } else {
         applyHeal(GS.player.stats, healAmt);
         addLog(`${skill.name}: Healed ${healAmt} HP!`);
+        addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.35, `+${healAmt}`, '#0f0', 20);
       }
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('heal');
       if (typeof Particles !== 'undefined') Particles.emit('heal', Renderer.getWidth() * 0.25, Renderer.getHeight() * 0.5, 15);
@@ -281,6 +325,7 @@ const Combat = (() => {
       _statusEffectsPlayer.push({ type: skill.effect, turns: skill.duration || 3, ...skill.buffData });
       addLog(`${skill.name}: Buff applied!`);
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('buff');
+      if (typeof Particles !== 'undefined') Particles.emit('buff', Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.4, 12);
     } else if (skill.type === 'summon' && typeof Allies !== 'undefined') {
       const summon = Allies.createSummon(skill.summonType, GS.player.stats.level);
       if (summon) {
@@ -293,13 +338,19 @@ const Combat = (() => {
       // Damage skill — AoE or single target
       const isPhysical = skill.damageType === 'physical';
       const element = skill.element || null;
+      const elementColors = { fire: '#f80', ice: '#8cf', lightning: '#ff0', dark: '#a0f', light: '#ffa', earth: '#a86' };
+      const dmgColor = elementColors[element] || (crit => crit ? '#ff0' : '#fff');
 
       if (skill.targetType === 'all_enemies' || skill.aoe) {
-        // AoE
-        for (const enemy of getLiveEnemies()) {
+        const live = getLiveEnemies();
+        for (let ei = 0; ei < live.length; ei++) {
+          const enemy = live[ei];
           const { dmg, crit } = calcDamage(GS.player.stats, enemy.stats, isPhysical, skill.power, element);
           applyDamage(enemy.stats, dmg);
           addLog(`${skill.name} → ${enemy.name}: ${dmg}${crit ? ' CRIT!' : ''}`);
+          const esx = getEnemyScreenX(ei);
+          const c = typeof dmgColor === 'function' ? dmgColor(crit) : dmgColor;
+          addFloatingNumber(esx + (Math.random() - 0.5) * 30, Renderer.getHeight() * 0.3, crit ? `${dmg}!` : dmg, c, crit ? 22 : 16);
           if (skill.statusEffect && Math.random() < (skill.statusChance || 0.3)) {
             addStatusEffect(enemy, skill.statusEffect, skill.statusDuration || 3, skill.statusDamage || 0);
           }
@@ -310,6 +361,9 @@ const Combat = (() => {
         const { dmg, crit } = calcDamage(GS.player.stats, target.stats, isPhysical, skill.power, element);
         applyDamage(target.stats, dmg);
         addLog(`${skill.name} → ${target.name}: ${dmg}${crit ? ' CRIT!' : ''}`);
+        const esx = getEnemyScreenX(getLiveEnemies().indexOf(target));
+        const c = typeof dmgColor === 'function' ? dmgColor(crit) : dmgColor;
+        addFloatingNumber(esx, Renderer.getHeight() * 0.3, crit ? `${dmg} CRIT!` : dmg, c, crit ? 24 : 18);
         if (skill.statusEffect && Math.random() < (skill.statusChance || 0.3)) {
           addStatusEffect(target, skill.statusEffect, skill.statusDuration || 3, skill.statusDamage || 0);
           addLog(`${target.name} is ${skill.statusEffect}!`);
@@ -323,17 +377,23 @@ const Combat = (() => {
         const healAmt = Math.floor(totalDmg * 0.3);
         applyHeal(GS.player.stats, healAmt);
         addLog(`Drained ${healAmt} HP!`);
+        addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.35, `+${healAmt}`, '#0f0', 16);
       }
       if (skill.special === 'steal_gold') {
         const stolen = Utils.randomInt(5, 20);
         GS.player.gold = (GS.player.gold || 0) + stolen;
         GS.player.stats.gold = GS.player.gold;
         addLog(`Stole ${stolen} gold!`);
+        addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.4, `+${stolen}g`, '#fc0', 16);
       }
       _shakeTimer = 0.4;
-      if (typeof AudioManager !== 'undefined') AudioManager.playSFX(skill.sfx || 'magic');
+      // Element-specific SFX
+      const sfxMap = { fire: 'fire', ice: 'ice', lightning: 'lightning', dark: 'dark', light: 'holy', holy: 'holy', earth: 'earth', poison: 'poison' };
+      const elementSfx = (element && sfxMap[element]) || skill.sfx || 'magic';
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX(elementSfx);
       if (typeof Particles !== 'undefined') {
-        const pType = skill.particleType || 'magic';
+        const pTypeMap = { light: 'holy', arcane: 'magic' };
+        const pType = pTypeMap[element] || element || skill.particleType || 'magic';
         Particles.emit(pType, Renderer.getWidth() * 0.65, Renderer.getHeight() * 0.4, 20);
       }
     }
@@ -496,6 +556,7 @@ const Combat = (() => {
         const { dmg: pdmg } = calcDamage(enemy.stats, GS.player.stats, isPhys, action.skill.power, element);
         applyDamage(GS.player.stats, pdmg);
         addLog(`${enemy.name}: ${action.skill.name} → You ${pdmg}!`);
+        addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.3, pdmg, '#f44', 20);
         for (const ally of getLiveAllies()) {
           const { dmg: admg } = calcDamage(enemy.stats, ally.stats, isPhys, action.skill.power * 0.7, element);
           applyDamage(ally.stats, admg);
@@ -504,6 +565,8 @@ const Combat = (() => {
         const { dmg, crit } = calcDamage(enemy.stats, targetStats, isPhys, action.skill.power, element);
         applyDamage(targetStats, dmg);
         addLog(`${enemy.name}: ${action.skill.name} → ${targetName} ${dmg}!${crit ? ' CRIT!' : ''}`);
+        const fX = targetStats === GS.player.stats ? Renderer.getWidth() * 0.15 : Renderer.getWidth() * 0.25;
+        addFloatingNumber(fX, Renderer.getHeight() * 0.3, crit ? `${dmg}!` : dmg, crit ? '#f44' : '#fa0', crit ? 22 : 18);
         if (action.skill.statusEffect && Math.random() < (action.skill.statusChance || 0.3)) {
           if (targetStats === GS.player.stats) {
             _statusEffectsPlayer.push({ type: action.skill.statusEffect, turns: action.skill.statusDuration || 3, damage: action.skill.statusDamage || 0 });
@@ -511,16 +574,22 @@ const Combat = (() => {
           }
         }
       }
-      if (typeof AudioManager !== 'undefined') AudioManager.playSFX(action.skill.sfx || 'hit');
+      const eSfxMap = { fire: 'fire', ice: 'ice', lightning: 'lightning', dark: 'dark', light: 'holy', holy: 'holy', earth: 'earth', poison: 'poison' };
+      const elemSfx = (action.skill.element && eSfxMap[action.skill.element]) || action.skill.sfx || 'hit';
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX(elemSfx);
     } else if (action && action.type === 'heal') {
       const healAmt = Math.floor(enemy.stats.maxHp * 0.2);
       applyHeal(enemy.stats, healAmt);
       addLog(`${enemy.name} heals ${healAmt}!`);
+      const eidx = getLiveEnemies().indexOf(enemy);
+      addFloatingNumber(getEnemyScreenX(eidx >= 0 ? eidx : 0), Renderer.getHeight() * 0.3, `+${healAmt}`, '#0f0', 16);
     } else {
       const { dmg, crit } = calcDamage(enemy.stats, targetStats, true);
       applyDamage(targetStats, dmg);
       addLog(`${enemy.name} → ${targetName}: ${dmg}${crit ? ' CRIT!' : ''}`);
-      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('hit');
+      const fX = targetStats === GS.player.stats ? Renderer.getWidth() * 0.15 : Renderer.getWidth() * 0.25;
+      addFloatingNumber(fX, Renderer.getHeight() * 0.3, crit ? `${dmg}!` : dmg, crit ? '#f44' : '#fa0', crit ? 22 : 18);
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX(crit ? 'critical' : 'hit');
     }
 
     _flashTimer = 0.3;
@@ -576,9 +645,11 @@ const Combat = (() => {
     if (getLiveEnemies().length === 0) {
       _combatResult = 'victory';
       _resultTimer = 2;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('victory');
     } else if (GS.player.stats.hp <= 0) {
       _combatResult = 'defeat';
       _resultTimer = 2;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('defeat');
     }
   }
 
@@ -774,6 +845,7 @@ const Combat = (() => {
 
     if (_shakeTimer > 0) _shakeTimer -= dt;
     if (_flashTimer > 0) _flashTimer -= dt;
+    updateFloatingNumbers(dt);
 
     if (_combatResult) {
       _resultTimer -= dt;
@@ -1105,6 +1177,9 @@ const Combat = (() => {
       const colors = { victory: '#ffcc00', defeat: '#ff4444', fled: '#aaa', final_victory: '#ffcc00' };
       Renderer.drawText(texts[_combatResult], w / 2, h * 0.3, colors[_combatResult], 36, 'center', true);
     }
+
+    // Floating damage numbers
+    renderFloatingNumbers();
   }
 
   function renderSkillMenu(w, h) {

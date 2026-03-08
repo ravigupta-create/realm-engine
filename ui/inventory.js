@@ -247,13 +247,45 @@ const Inventory = (() => {
       }
     }
 
-    // Item details
+    // Item details + equipment comparison
     if (_selectedSlot < items.length) {
       const item = items[_selectedSlot];
-      const detailY = h - 120;
-      Renderer.drawPanel(50, detailY, w - 100, 55);
+      const detailY = h - 145;
+      const detailH = item.type === 'equipment' ? 80 : 55;
+      Renderer.drawPanel(50, detailY, w - 100, detailH);
       Renderer.drawText(item.name, 70, detailY + 8, Items.getRarityColor(item.rarity || 'common'), 14);
+
+      // Show enchant info
+      if (item.enchant) {
+        Renderer.drawText(`[${item.enchant.name}]`, 70 + item.name.length * 8 + 10, detailY + 8, '#a5f', 12);
+      }
+
       Renderer.drawText(item.desc || '', 70, detailY + 28, '#bbb', 11);
+
+      // Equipment comparison
+      if (item.type === 'equipment' && item.stats) {
+        const current = GS.player.equipment[item.slot];
+        let compText = '';
+        const statKeys = ['str', 'def', 'int', 'agi', 'luk', 'hp', 'mp'];
+        for (const k of statKeys) {
+          const newVal = item.stats[k] || 0;
+          const oldVal = current?.stats?.[k] || 0;
+          const diff = newVal - oldVal;
+          if (diff !== 0) {
+            const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+            const diffColor = diff > 0 ? '#4f4' : '#f44';
+            compText += `${k.toUpperCase()}:${diffStr}  `;
+          }
+        }
+        if (compText) {
+          Renderer.drawText('vs equipped: ' + compText.trim(), 70, detailY + 46, '#888', 10);
+        } else if (!current) {
+          Renderer.drawText('Slot empty - ENTER to equip', 70, detailY + 46, '#888', 10);
+        }
+        if (item.sellValue) {
+          Renderer.drawText(`Sell: ${item.sellValue}g`, w - 160, detailY + 8, '#888', 11, 'right');
+        }
+      }
     }
   }
 

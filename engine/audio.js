@@ -65,6 +65,18 @@ const AudioManager = (() => {
       case 'equip': sfxClick(500, 0.06); break;
       case 'quest': sfxQuest(); break;
       case 'quest_complete': sfxQuestComplete(); break;
+      case 'fire': sfxFire(); break;
+      case 'ice': sfxIce(); break;
+      case 'lightning': sfxLightning(); break;
+      case 'dark': sfxDark(); break;
+      case 'holy': sfxHoly(); break;
+      case 'earth': sfxEarth(); break;
+      case 'poison': sfxPoison(); break;
+      case 'victory': sfxVictory(); break;
+      case 'defeat': sfxDefeat(); break;
+      case 'critical': sfxCritical(); break;
+      case 'dodge': sfxDodge(); break;
+      case 'death': sfxDeath(); break;
     }
   }
 
@@ -236,6 +248,225 @@ const AudioManager = (() => {
     setTimeout(() => sfxCoin(), 500);
   }
 
+  // ======== Element SFX ========
+
+  function sfxFire() {
+    // Crackling noise + rising pitch
+    const dur = 0.4;
+    const bufSize = Math.floor(_ctx.sampleRate * dur);
+    const buf = _ctx.createBuffer(1, bufSize, _ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      const t = i / bufSize;
+      const crackle = Math.random() > 0.85 ? (Math.random() * 2 - 1) * 0.5 : 0;
+      data[i] = (Math.sin(i * (200 + t * 600) / _ctx.sampleRate * Math.PI * 2) * 0.2 + crackle) * (1 - t * 0.7);
+    }
+    const src = _ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(_sfxGain);
+    src.start();
+  }
+
+  function sfxIce() {
+    // Shimmering high-frequency sweep
+    const osc = _ctx.createOscillator();
+    const gain = _ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(2000, _ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(500, _ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.2, _ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(_sfxGain);
+    osc.start();
+    osc.stop(_ctx.currentTime + 0.4);
+    // Crystal shimmer
+    const osc2 = _ctx.createOscillator();
+    const gain2 = _ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(3000, _ctx.currentTime);
+    osc2.frequency.exponentialRampToValueAtTime(1000, _ctx.currentTime + 0.25);
+    gain2.gain.setValueAtTime(0.08, _ctx.currentTime);
+    gain2.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + 0.3);
+    osc2.connect(gain2);
+    gain2.connect(_sfxGain);
+    osc2.start();
+    osc2.stop(_ctx.currentTime + 0.3);
+  }
+
+  function sfxLightning() {
+    // Sharp crack + rumble
+    const dur = 0.3;
+    const bufSize = Math.floor(_ctx.sampleRate * dur);
+    const buf = _ctx.createBuffer(1, bufSize, _ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      const t = i / bufSize;
+      const crack = t < 0.05 ? (Math.random() * 2 - 1) * 0.8 : 0;
+      const rumble = Math.sin(i * 60 / _ctx.sampleRate * Math.PI * 2) * (1 - t) * 0.15;
+      data[i] = crack + rumble + (Math.random() * 2 - 1) * Math.max(0, 0.3 - t) * 0.4;
+    }
+    const src = _ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(_sfxGain);
+    src.start();
+  }
+
+  function sfxDark() {
+    // Deep ominous drone + descending sweep
+    const osc = _ctx.createOscillator();
+    const gain = _ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, _ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(60, _ctx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.15, _ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(_sfxGain);
+    osc.start();
+    osc.stop(_ctx.currentTime + 0.5);
+  }
+
+  function sfxHoly() {
+    // Angelic chord (major triad rising)
+    [523, 659, 784, 1047].forEach((freq, i) => {
+      const osc = _ctx.createOscillator();
+      const gain = _ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, _ctx.currentTime + i * 0.05);
+      gain.gain.linearRampToValueAtTime(0.12, _ctx.currentTime + i * 0.05 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + 0.6);
+      osc.connect(gain);
+      gain.connect(_sfxGain);
+      osc.start(_ctx.currentTime + i * 0.05);
+      osc.stop(_ctx.currentTime + 0.6);
+    });
+  }
+
+  function sfxEarth() {
+    // Low rumble + impact
+    const dur = 0.35;
+    const bufSize = Math.floor(_ctx.sampleRate * dur);
+    const buf = _ctx.createBuffer(1, bufSize, _ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      const t = i / bufSize;
+      data[i] = Math.sin(i * 80 / _ctx.sampleRate * Math.PI * 2) * (1 - t) * 0.3
+        + (Math.random() * 2 - 1) * Math.max(0, 0.15 - t) * 0.6;
+    }
+    const src = _ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(_sfxGain);
+    src.start();
+  }
+
+  function sfxPoison() {
+    // Bubbly, wet sound
+    [300, 350, 280, 320].forEach((freq, i) => {
+      const osc = _ctx.createOscillator();
+      const gain = _ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.1, _ctx.currentTime + i * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + i * 0.08 + 0.1);
+      osc.connect(gain);
+      gain.connect(_sfxGain);
+      osc.start(_ctx.currentTime + i * 0.08);
+      osc.stop(_ctx.currentTime + i * 0.08 + 0.1);
+    });
+  }
+
+  function sfxVictory() {
+    // Triumphant fanfare: C E G C (ascending major)
+    const notes = [523, 659, 784, 1047, 1319];
+    notes.forEach((freq, i) => {
+      const osc = _ctx.createOscillator();
+      const gain = _ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, _ctx.currentTime + i * 0.15);
+      gain.gain.linearRampToValueAtTime(0.2, _ctx.currentTime + i * 0.15 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + i * 0.15 + 0.6);
+      osc.connect(gain);
+      gain.connect(_sfxGain);
+      osc.start(_ctx.currentTime + i * 0.15);
+      osc.stop(_ctx.currentTime + i * 0.15 + 0.6);
+    });
+    // Harmony layer
+    [659, 784, 1047, 1319, 1568].forEach((freq, i) => {
+      const osc = _ctx.createOscillator();
+      const gain = _ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, _ctx.currentTime + i * 0.15 + 0.02);
+      gain.gain.linearRampToValueAtTime(0.08, _ctx.currentTime + i * 0.15 + 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + i * 0.15 + 0.5);
+      osc.connect(gain);
+      gain.connect(_sfxGain);
+      osc.start(_ctx.currentTime + i * 0.15 + 0.02);
+      osc.stop(_ctx.currentTime + i * 0.15 + 0.5);
+    });
+  }
+
+  function sfxDefeat() {
+    // Sad descending minor
+    const notes = [440, 392, 330, 262, 196];
+    notes.forEach((freq, i) => {
+      const osc = _ctx.createOscillator();
+      const gain = _ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, _ctx.currentTime + i * 0.25);
+      gain.gain.linearRampToValueAtTime(0.12, _ctx.currentTime + i * 0.25 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + i * 0.25 + 0.5);
+      osc.connect(gain);
+      gain.connect(_sfxGain);
+      osc.start(_ctx.currentTime + i * 0.25);
+      osc.stop(_ctx.currentTime + i * 0.25 + 0.5);
+    });
+  }
+
+  function sfxCritical() {
+    sfxSlash();
+    // Extra impact
+    setTimeout(() => {
+      sfxClick(1500, 0.08);
+      sfxClick(200, 0.15);
+    }, 50);
+  }
+
+  function sfxDodge() {
+    // Quick whoosh
+    const dur = 0.15;
+    const bufSize = Math.floor(_ctx.sampleRate * dur);
+    const buf = _ctx.createBuffer(1, bufSize, _ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      const t = i / bufSize;
+      data[i] = (Math.random() * 2 - 1) * Math.sin(t * Math.PI) * 0.15;
+    }
+    const src = _ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(_sfxGain);
+    src.start();
+  }
+
+  function sfxDeath() {
+    // Low thud + fade
+    const osc = _ctx.createOscillator();
+    const gain = _ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, _ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, _ctx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.25, _ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(_sfxGain);
+    osc.start();
+    osc.stop(_ctx.currentTime + 0.5);
+  }
+
   // ======== MUSIC ========
 
   function playMusic(type) {
@@ -329,5 +560,8 @@ const AudioManager = (() => {
     if (music !== undefined && _musicGain) _musicGain.gain.value = music;
   }
 
-  return { init, playSFX, playMusic, stopMusic, setVolume };
+  function setMusicVolume(v) { if (_musicGain) _musicGain.gain.value = v; }
+  function setSFXVolume(v) { if (_sfxGain) _sfxGain.gain.value = v; }
+
+  return { init, playSFX, playMusic, stopMusic, setVolume, setMusicVolume, setSFXVolume };
 })();

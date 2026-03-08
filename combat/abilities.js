@@ -65,7 +65,7 @@ const Abilities = (() => {
     lightning: {
       id: 'lightning', name: 'Lightning', class: 'mage', levelReq: 5,
       mpCost: 18, power: 2.2, type: 'damage', damageType: 'magical', element: 'lightning',
-      desc: 'Strike with lightning.', sfx: 'magic', particleType: 'magic'
+      desc: 'Strike with lightning.', sfx: 'lightning', particleType: 'lightning'
     },
     heal: {
       id: 'heal', name: 'Heal', class: 'mage', levelReq: 2,
@@ -80,7 +80,7 @@ const Abilities = (() => {
     },
     arcane_blast: {
       id: 'arcane_blast', name: 'Arcane Blast', class: 'mage', levelReq: 8,
-      mpCost: 22, power: 2.5, type: 'damage', damageType: 'magical',
+      mpCost: 22, power: 2.5, type: 'damage', damageType: 'magical', element: 'arcane',
       desc: 'Pure arcane energy.', sfx: 'magic', particleType: 'magic'
     },
     regen: {
@@ -106,7 +106,7 @@ const Abilities = (() => {
       id: 'poison_arrow', name: 'Poison Arrow', class: 'ranger', levelReq: 3,
       mpCost: 10, power: 1.0, type: 'damage', damageType: 'physical',
       statusEffect: 'poison', statusChance: 0.6, statusDuration: 4, statusDamage: 8,
-      desc: 'Poison-tipped arrow.', sfx: 'hit', particleType: 'hit'
+      desc: 'Poison-tipped arrow.', sfx: 'poison', particleType: 'poison'
     },
     trap: {
       id: 'trap', name: 'Trap', class: 'ranger', levelReq: 4,
@@ -145,7 +145,7 @@ const Abilities = (() => {
     holy_strike: {
       id: 'holy_strike', name: 'Holy Strike', class: 'paladin', levelReq: 1,
       mpCost: 8, power: 1.4, type: 'damage', damageType: 'physical', element: 'light',
-      desc: 'A light-infused melee strike.', sfx: 'slash', particleType: 'heal'
+      desc: 'A light-infused melee strike.', sfx: 'holy', particleType: 'holy'
     },
     divine_shield: {
       id: 'divine_shield', name: 'Divine Shield', class: 'paladin', levelReq: 3,
@@ -156,7 +156,7 @@ const Abilities = (() => {
     smite: {
       id: 'smite', name: 'Smite', class: 'paladin', levelReq: 4,
       mpCost: 12, power: 2.0, type: 'damage', damageType: 'magical', element: 'light',
-      desc: 'Holy light smites the enemy.', sfx: 'magic', particleType: 'heal'
+      desc: 'Holy light smites the enemy.', sfx: 'holy', particleType: 'holy'
     },
     lay_on_hands: {
       id: 'lay_on_hands', name: 'Lay on Hands', class: 'paladin', levelReq: 6,
@@ -167,7 +167,7 @@ const Abilities = (() => {
       id: 'consecrate', name: 'Consecrate', class: 'paladin', levelReq: 8,
       mpCost: 18, power: 1.5, type: 'damage', damageType: 'magical', element: 'light',
       aoe: true,
-      desc: 'Holy ground damages all enemies.', sfx: 'magic', particleType: 'heal'
+      desc: 'Holy ground damages all enemies.', sfx: 'holy', particleType: 'holy'
     },
     righteous_fury: {
       id: 'righteous_fury', name: 'Righteous Fury', class: 'paladin', levelReq: 10,
@@ -184,7 +184,7 @@ const Abilities = (() => {
     judgment: {
       id: 'judgment', name: 'Judgment', class: 'paladin', levelReq: 15,
       mpCost: 35, power: 4.0, type: 'damage', damageType: 'magical', element: 'light',
-      desc: 'Divine judgment upon the wicked.', sfx: 'magic', particleType: 'heal'
+      desc: 'Divine judgment upon the wicked.', sfx: 'holy', particleType: 'holy'
     },
 
     // ======== ROGUE SKILLS ========
@@ -220,7 +220,7 @@ const Abilities = (() => {
       id: 'envenom', name: 'Envenom', class: 'rogue', levelReq: 10,
       mpCost: 15, power: 1.2, type: 'damage', damageType: 'physical',
       statusEffect: 'poison', statusChance: 0.8, statusDuration: 5, statusDamage: 12,
-      desc: 'Deadly poison coating.', sfx: 'hit', particleType: 'hit'
+      desc: 'Deadly poison coating.', sfx: 'poison', particleType: 'poison'
     },
     evasion_mastery: {
       id: 'evasion_mastery', name: 'Evasion', class: 'rogue', levelReq: 12,
@@ -238,24 +238,24 @@ const Abilities = (() => {
     dark_bolt: {
       id: 'dark_bolt', name: 'Dark Bolt', class: 'necromancer', levelReq: 1,
       mpCost: 8, power: 1.6, type: 'damage', damageType: 'magical', element: 'dark',
-      desc: 'A bolt of dark energy.', sfx: 'magic', particleType: 'magic'
+      desc: 'A bolt of dark energy.', sfx: 'dark', particleType: 'dark'
     },
     life_drain: {
       id: 'life_drain', name: 'Life Drain', class: 'necromancer', levelReq: 1,
       mpCost: 10, power: 1.2, type: 'damage', damageType: 'magical', element: 'dark',
       special: 'lifesteal',
-      desc: 'Drain life from enemy. Heals you.', sfx: 'magic', particleType: 'magic'
+      desc: 'Drain life from enemy. Heals you.', sfx: 'dark', particleType: 'dark'
     },
     raise_skeleton: {
       id: 'raise_skeleton', name: 'Raise Skeleton', class: 'necromancer', levelReq: 4,
       mpCost: 20, type: 'summon', summonType: 'skeleton_warrior',
-      desc: 'Raise a skeleton warrior to fight.', sfx: 'magic', particleType: 'magic'
+      desc: 'Raise a skeleton warrior to fight.', sfx: 'dark', particleType: 'dark'
     },
     curse: {
       id: 'curse', name: 'Curse', class: 'necromancer', levelReq: 5,
       mpCost: 12, power: 0.5, type: 'damage', damageType: 'magical', element: 'dark',
       statusEffect: 'poison', statusChance: 1.0, statusDuration: 5, statusDamage: 10,
-      desc: 'Curse the enemy. Guaranteed DoT.', sfx: 'magic', particleType: 'magic'
+      desc: 'Curse the enemy. Guaranteed DoT.', sfx: 'dark', particleType: 'poison'
     },
     bone_shield: {
       id: 'bone_shield', name: 'Bone Shield', class: 'necromancer', levelReq: 7,
@@ -266,25 +266,25 @@ const Abilities = (() => {
     soul_harvest: {
       id: 'soul_harvest', name: 'Soul Harvest', class: 'necromancer', levelReq: 9,
       mpCost: 20, power: 1.8, type: 'damage', damageType: 'magical', element: 'dark', aoe: true,
-      desc: 'Harvest souls from all enemies.', sfx: 'magic', particleType: 'magic'
+      desc: 'Harvest souls from all enemies.', sfx: 'dark', particleType: 'dark'
     },
     plague: {
       id: 'plague', name: 'Plague', class: 'necromancer', levelReq: 12,
       mpCost: 25, power: 0.8, type: 'damage', damageType: 'magical', element: 'dark', aoe: true,
       statusEffect: 'poison', statusChance: 0.7, statusDuration: 4, statusDamage: 15,
-      desc: 'Spread plague to all enemies.', sfx: 'magic', particleType: 'magic'
+      desc: 'Spread plague to all enemies.', sfx: 'poison', particleType: 'poison'
     },
     army_of_dead: {
       id: 'army_of_dead', name: 'Army of Dead', class: 'necromancer', levelReq: 15,
       mpCost: 45, power: 3.5, type: 'damage', damageType: 'magical', element: 'dark', aoe: true,
-      desc: 'Unleash an undead army.', sfx: 'magic', particleType: 'magic'
+      desc: 'Unleash an undead army.', sfx: 'dark', particleType: 'dark'
     },
 
     // ======== DRUID SKILLS ========
     nature_bolt: {
       id: 'nature_bolt', name: 'Nature Bolt', class: 'druid', levelReq: 1,
       mpCost: 8, power: 1.5, type: 'damage', damageType: 'magical', element: 'earth',
-      desc: 'A bolt of natural energy.', sfx: 'magic', particleType: 'heal'
+      desc: 'A bolt of natural energy.', sfx: 'earth', particleType: 'earth'
     },
     rejuvenate: {
       id: 'rejuvenate', name: 'Rejuvenate', class: 'druid', levelReq: 1,
@@ -295,12 +295,12 @@ const Abilities = (() => {
       id: 'entangle', name: 'Entangle', class: 'druid', levelReq: 4,
       mpCost: 12, power: 0.8, type: 'damage', damageType: 'magical', element: 'earth',
       statusEffect: 'stun', statusChance: 0.6, statusDuration: 2,
-      desc: 'Roots hold the enemy. High stun.', sfx: 'magic', particleType: 'heal'
+      desc: 'Roots hold the enemy. High stun.', sfx: 'earth', particleType: 'earth'
     },
     summon_wolf: {
       id: 'summon_wolf', name: 'Summon Wolf', class: 'druid', levelReq: 5,
       mpCost: 18, type: 'summon', summonType: 'nature_golem',
-      desc: 'Summon a nature beast to fight.', sfx: 'magic', particleType: 'heal'
+      desc: 'Summon a nature beast to fight.', sfx: 'earth', particleType: 'earth'
     },
     thorns_aura: {
       id: 'thorns_aura', name: 'Thorns Aura', class: 'druid', levelReq: 7,
@@ -323,7 +323,7 @@ const Abilities = (() => {
     wrath_of_nature: {
       id: 'wrath_of_nature', name: 'Wrath of Nature', class: 'druid', levelReq: 15,
       mpCost: 40, power: 3.8, type: 'damage', damageType: 'magical', element: 'earth', aoe: true,
-      desc: 'Nature devastates all enemies.', sfx: 'magic', particleType: 'heal'
+      desc: 'Nature devastates all enemies.', sfx: 'earth', particleType: 'earth'
     },
 
     // ======== MONK SKILLS ========

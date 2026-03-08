@@ -122,6 +122,49 @@ const Particles = (() => {
       count: 1, spread: 0, speed: 10, life: 2.0,
       size: 1, gravity: -2, shrink: false,
       colors: ['rgba(200,180,140,0.3)', 'rgba(180,160,120,0.3)']
+    },
+    // Element particles
+    lightning: {
+      count: 10, spread: 30, speed: 250, life: 0.2,
+      size: 2, gravity: 0, shrink: false,
+      colors: ['#ff0', '#ffa', '#fff', '#ee0']
+    },
+    poison: {
+      count: 10, spread: 15, speed: 40, life: 1.0,
+      size: 3, gravity: -30, shrink: true,
+      colors: ['#0a0', '#4c0', '#080', '#2f2']
+    },
+    dark: {
+      count: 15, spread: 20, speed: 60, life: 0.6,
+      size: 4, gravity: 20, shrink: true,
+      colors: ['#408', '#606', '#303', '#202']
+    },
+    holy: {
+      count: 15, spread: 15, speed: 70, life: 0.8,
+      size: 4, gravity: -40, shrink: false,
+      angle: -Math.PI / 2, angleSpread: 0.8,
+      colors: ['#ff8', '#ffa', '#fff', '#ffc']
+    },
+    earth: {
+      count: 12, spread: 25, speed: 100, life: 0.5,
+      size: 4, gravity: 300, shrink: true,
+      colors: ['#864', '#a86', '#642', '#ca8']
+    },
+    critical: {
+      count: 20, spread: 10, speed: 200, life: 0.4,
+      size: 4, gravity: 0, shrink: true,
+      colors: ['#f00', '#ff0', '#f80', '#fff']
+    },
+    buff: {
+      count: 12, spread: 15, speed: 40, life: 0.8,
+      size: 3, gravity: -40, shrink: false,
+      angle: -Math.PI / 2, angleSpread: 0.6,
+      colors: ['#4af', '#8cf', '#aef', '#fff']
+    },
+    stun: {
+      count: 6, spread: 10, speed: 30, life: 0.6,
+      size: 3, gravity: -10, shrink: false,
+      colors: ['#ff0', '#ffa', '#ee0']
     }
   };
 

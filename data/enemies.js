@@ -475,5 +475,13 @@ const Enemies = (() => {
     };
   }
 
-  return { defs, get, getScaledStats };
+  function getAllEnemies() {
+    return Object.entries(defs).map(([type, data]) => ({
+      type, name: data.name, level: data.level, element: data.element,
+      weakness: data.weakness, resistance: data.resistance,
+      stats: data, lootTable: data.lootTable || [], isBoss: data.isBoss || false
+    }));
+  }
+
+  return { defs, get, getScaledStats, getAllEnemies };
 })();

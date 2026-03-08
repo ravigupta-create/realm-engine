@@ -6,7 +6,10 @@ const Animations = (() => {
     walk: { frames: [0, 1, 2, 3], speed: 8 },
     attack: { frames: [0, 1, 2, 1], speed: 12, oneShot: true },
     hurt: { frames: [0, 1, 0], speed: 10, oneShot: true },
-    death: { frames: [0, 1, 2, 3], speed: 6, oneShot: true }
+    death: { frames: [0, 1, 2, 3], speed: 6, oneShot: true },
+    cast: { frames: [0, 1, 2, 1, 0], speed: 10, oneShot: true },
+    dodge: { frames: [0, 1, 0], speed: 12, oneShot: true },
+    block: { frames: [0, 1, 1, 0], speed: 8, oneShot: true }
   };
 
   function createAnimState(animName) {
