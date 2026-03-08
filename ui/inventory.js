@@ -271,19 +271,24 @@ const Inventory = (() => {
         let compText = '';
         const statKeys = ['str', 'def', 'int', 'agi', 'luk', 'hp', 'mp'];
         for (const k of statKeys) {
-          const newVal = item.stats[k] || 0;
-          const oldVal = current?.stats?.[k] || 0;
+          let newVal = item.stats[k] || 0;
+          let oldVal = current?.stats?.[k] || 0;
+          // Include enchant stat bonuses in comparison
+          if (item.enchant && item.enchant.stats && item.enchant.stats[k]) newVal += item.enchant.stats[k];
+          if (current?.enchant && current.enchant.stats && current.enchant.stats[k]) oldVal += current.enchant.stats[k];
           const diff = newVal - oldVal;
           if (diff !== 0) {
             const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
-            const diffColor = diff > 0 ? '#4f4' : '#f44';
             compText += `${k.toUpperCase()}:${diffStr}  `;
           }
         }
         if (compText) {
+          // Color green/red based on overall improvement
           Renderer.drawText('vs equipped: ' + compText.trim(), 70, detailY + 46, '#888', 10);
         } else if (!current) {
-          Renderer.drawText('Slot empty - ENTER to equip', 70, detailY + 46, '#888', 10);
+          Renderer.drawText('Slot empty - ENTER to equip', 70, detailY + 46, '#4f4', 10);
+        } else {
+          Renderer.drawText('Same as equipped', 70, detailY + 46, '#666', 10);
         }
         if (item.sellValue) {
           Renderer.drawText(`Sell: ${item.sellValue}g`, w - 160, detailY + 8, '#888', 11, 'right');

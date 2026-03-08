@@ -81,16 +81,35 @@ const HUD = (() => {
       Renderer.drawText(badge.trim(), w - 160, 10, diffColors[GS.difficulty] || '#aaa', 10, 'left');
     }
 
-    // ======== Time of day ========
+    // ======== Day/Night + Combat Modifiers ========
     if (typeof DayNight !== 'undefined') {
       const time = DayNight.getTimeOfDay();
       const timeStr = `${String(time.hours).padStart(2, '0')}:${String(time.minutes).padStart(2, '0')}`;
-      Renderer.drawText(`${timeStr} ${DayNight.getTimeName()}`, w - 160, h - 20, '#888', 11, 'left');
+      const mods = DayNight.getCombatModifiers();
+      const nightBadge = mods.isNight ? ' [Night +25% XP]' : '';
+      Renderer.drawText(`${timeStr} ${DayNight.getTimeName()}${nightBadge}`, w - 160, h - 20, mods.isNight ? '#aaf' : '#888', 11, 'left');
+    }
+
+    // ======== Daily challenge timer ========
+    if (typeof DailyChallenges !== 'undefined') {
+      const challenges = DailyChallenges.getChallenges();
+      const unclaimed = challenges.filter(c => c.completed && !c.claimed).length;
+      const incomplete = challenges.filter(c => !c.completed).length;
+      if (unclaimed > 0) {
+        Renderer.drawText(`${unclaimed} daily reward(s) ready!`, w - 160, h - 34, '#f0c040', 10, 'left');
+      } else if (incomplete > 0) {
+        // Show time until daily reset (midnight)
+        const now = new Date();
+        const msToMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
+        const hrsLeft = Math.floor(msToMidnight / 3600000);
+        const minsLeft = Math.floor((msToMidnight % 3600000) / 60000);
+        Renderer.drawText(`Dailies reset: ${hrsLeft}h ${minsLeft}m`, w - 160, h - 34, '#666', 9, 'left');
+      }
     }
 
     // ======== FPS ========
     if (GS.settings.showFPS) {
-      Renderer.drawText(`FPS: ${GS.fps}`, w - 80, h - 20, '#0f0', 11);
+      Renderer.drawText(`FPS: ${GS.fps}`, w - 80, h - 48, '#0f0', 11);
     }
 
     // ======== Controls hint ========

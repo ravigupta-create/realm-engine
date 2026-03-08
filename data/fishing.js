@@ -59,12 +59,14 @@ const Fishing = (() => {
 
   function canFish() {
     if (_state.active) return false;
-    // Check if player has fishing rod
+    // Check if player has fishing rod by various indicators
     const inv = GS.player.items || [];
-    const hasRod = inv.some(i => i && (i.id === 'fishing_rod' || i.name === 'Fishing Rod')) ||
-                   (GS.player.equipment?.weapon?.id === 'fishing_rod');
-    // Also check if fishing skill unlocked
-    return hasRod || (GS.player.fishingUnlocked === true);
+    const hasRod = inv.some(i => i && (i.id === 'fishing_rod' || i.name === 'Fishing Rod' ||
+                   (i.name && i.name.toLowerCase().includes('fishing rod')))) ||
+                   (GS.player.equipment?.weapon?.id === 'fishing_rod') ||
+                   (GS.player.equipment?.weapon?.name && GS.player.equipment.weapon.name.toLowerCase().includes('fishing rod'));
+    // Also check if fishing skill unlocked or rod level set
+    return hasRod || (GS.player.fishingUnlocked === true) || (GS.player.rodLevel && GS.player.rodLevel > 0);
   }
 
   function startFishing() {
@@ -109,8 +111,8 @@ const Fishing = (() => {
 
       case 'bite':
         _state.timer += dt;
-        // Fish escapes after window
-        const window = 3 + _state.rodLevel * 0.5;
+        // Fish escapes after window — higher rod = longer window
+        const window = 3 + _state.rodLevel * 0.8;
         if (_state.timer > window) {
           _state.phase = 'failed';
           _state.timer = 0;
@@ -190,7 +192,10 @@ const Fishing = (() => {
 
   function getReelDifficulty(fish) {
     const base = { junk: 30, common: 40, uncommon: 55, rare: 75, epic: 95, legendary: 120 };
-    return base[fish.rarity] || 50;
+    const baseDiff = base[fish.rarity] || 50;
+    // Rod level reduces difficulty (higher rod = easier reeling)
+    const rodReduction = Math.max(0.5, 1 - (_state.rodLevel - 1) * 0.08);
+    return Math.floor(baseDiff * rodReduction);
   }
 
   function catchFish(fish) {
@@ -198,6 +203,9 @@ const Fishing = (() => {
     _state.timer = 0;
     _state.combo++;
     GS.player.fishingCombo = _state.combo;
+    if (_state.combo > (GS.player.bestFishingCombo || 0)) {
+      GS.player.bestFishingCombo = _state.combo;
+    }
 
     // Track fish
     if (!GS.player.fishCaught) GS.player.fishCaught = {};
@@ -218,11 +226,17 @@ const Fishing = (() => {
     const rarityColors = { junk: '#888', common: '#fff', uncommon: '#4f4', rare: '#48f', epic: '#c4f', legendary: '#fa0' };
     Core.addNotification(`Caught: ${fish.name}! (+${gold}g, +${xp}xp)`, 3);
 
-    if (typeof AudioManager !== 'undefined') AudioManager.playSFX('quest_complete');
+    if (typeof AudioManager !== 'undefined') AudioManager.playSFX(fish.rarity === 'legendary' ? 'levelup' : 'quest_complete');
     if (typeof Achievements !== 'undefined') Achievements.onFishCaught();
     if (typeof Quests !== 'undefined') Quests.onFishCaught();
     if (typeof DailyChallenges !== 'undefined') DailyChallenges.onFishCaught();
-    if (typeof Particles !== 'undefined') Particles.emit('levelup', Renderer.getWidth() / 2, Renderer.getHeight() / 2, 10);
+    // Rarity-appropriate victory particles
+    if (typeof Particles !== 'undefined') {
+      const rarityParticles = { junk: 'dust', common: 'hit', uncommon: 'heal', rare: 'magic', epic: 'arcane', legendary: 'levelup' };
+      const pType = rarityParticles[fish.rarity] || 'hit';
+      const pCount = { junk: 5, common: 8, uncommon: 12, rare: 18, epic: 25, legendary: 35 }[fish.rarity] || 10;
+      Particles.emit(pType, Renderer.getWidth() / 2, Renderer.getHeight() / 2, pCount);
+    }
 
     // Special treasure chest catch
     if (fish.id === 'treasure_chest') {

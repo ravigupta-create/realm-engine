@@ -245,8 +245,19 @@ const DailyChallenges = (() => {
     return GS.dailyChallenges?.streak || 0;
   }
 
+  function getTimeUntilReset() {
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const ms = midnight.getTime() - now.getTime();
+    return {
+      hours: Math.floor(ms / 3600000),
+      minutes: Math.floor((ms % 3600000) / 60000),
+      totalMs: ms
+    };
+  }
+
   return {
-    init, getChallenges, claimReward, getStreak,
+    init, getChallenges, claimReward, getStreak, getTimeUntilReset,
     onEnemyKilled, onGoldEarned, onItemCrafted, onFishCaught, onQuestComplete,
     onBossKilled, onZoneVisited, onCombo, onNoDamageBattle, onGoldSpent,
     onEnchant, onPetXP, onAllyLevelUp, onSkillUsed

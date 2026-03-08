@@ -83,6 +83,19 @@ const Combat = (() => {
         const data = typeof Enemies !== 'undefined' ? Enemies.get(enemy.enemyType) : null;
         enemy.abilities = data ? data.abilities || [] : [];
       }
+      // Apply NG+ / difficulty multiplier to enemy stats
+      if (typeof NewGamePlus !== 'undefined') {
+        const mult = NewGamePlus.getEnemyMultiplier();
+        if (mult > 1 && !enemy._ngScaled) {
+          enemy.stats.maxHp = Math.floor(enemy.stats.maxHp * mult);
+          enemy.stats.hp = enemy.stats.maxHp;
+          enemy.stats.str = Math.floor(enemy.stats.str * mult);
+          enemy.stats.def = Math.floor(enemy.stats.def * mult);
+          enemy.stats.int = Math.floor(enemy.stats.int * mult);
+          enemy.stats.agi = Math.floor(enemy.stats.agi * mult);
+          enemy._ngScaled = true;
+        }
+      }
       _statusEffectsMap[enemy.id || enemy.name] = [];
     }
 
@@ -422,10 +435,12 @@ const Combat = (() => {
 
       if (skill.targetType === 'all_enemies' || skill.aoe) {
         const live = getLiveEnemies();
+        let aoeTotalDmg = 0;
         for (let ei = 0; ei < live.length; ei++) {
           const enemy = live[ei];
           const { dmg, crit } = calcDamage(GS.player.stats, enemy.stats, isPhysical, skill.power, element);
           applyDamage(enemy.stats, dmg);
+          aoeTotalDmg += dmg;
           addLog(`${skill.name} → ${enemy.name}: ${dmg}${crit ? ' CRIT!' : ''}`);
           const esx = getEnemyScreenX(ei);
           const c = typeof dmgColor === 'function' ? dmgColor(crit) : dmgColor;
@@ -434,6 +449,8 @@ const Combat = (() => {
             addStatusEffect(enemy, skill.statusEffect, skill.statusDuration || 3, skill.statusDamage || 0);
           }
         }
+        // Apply enchant effects for AoE damage too
+        applyEnchantEffects(aoeTotalDmg);
       } else {
         const target = getTargetEnemy();
         if (!target) return false;
@@ -471,6 +488,12 @@ const Combat = (() => {
         GS.player.stats.gold = GS.player.gold;
         addLog(`Stole ${stolen} gold!`);
         addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.4, `+${stolen}g`, '#fc0', 16);
+      }
+      // Apply enchant effects (lifesteal, mp_on_hit) for skill damage too
+      if (skill.targetType !== 'all_enemies' && !skill.aoe) {
+        applyEnchantEffects(totalDmg);
+        const target2 = getTargetEnemy();
+        if (target2) applyPetCombatBonus(totalDmg, target2);
       }
       _shakeTimer = 0.4;
       // Element-specific SFX
@@ -837,10 +860,11 @@ const Combat = (() => {
       }
     }
 
-    // NG+ multiplier
-    const ngMult = GS.ngPlus ? (1 + GS.ngPlus * 0.5) : 1;
-    totalXp = Math.floor(totalXp * ngMult);
-    totalGold = Math.floor(totalGold * ngMult);
+    // NG+ and difficulty multipliers
+    if (typeof NewGamePlus !== 'undefined') {
+      totalXp = Math.floor(totalXp * NewGamePlus.getXPMultiplier());
+      totalGold = Math.floor(totalGold * NewGamePlus.getGoldMultiplier());
+    }
 
     // Pet gold bonus
     if (GS.player.activePet && GS.player.activePet.combatBonus && GS.player.activePet.combatBonus.type === 'gold_bonus') {
@@ -894,7 +918,7 @@ const Combat = (() => {
       if (_comboCounter >= 5) {
         Achievements.unlock('max_combo');
       }
-      // Boss-specific achievements
+      // Boss-specific achievements — robust matching
       for (const enemy of _enemies) {
         if (enemy.isBoss) {
           const bossMap = {
@@ -904,7 +928,18 @@ const Combat = (() => {
             'Abyssal Lord': 'boss_slayer_4',
             'Crystal Dragon': 'boss_slayer_5'
           };
-          const achId = bossMap[enemy.name];
+          const name = enemy.name;
+          let achId = bossMap[name];
+          // Fallback: partial match for robustness
+          if (!achId) {
+            for (const [bossName, aid] of Object.entries(bossMap)) {
+              if (name.toLowerCase().includes(bossName.toLowerCase()) ||
+                  bossName.toLowerCase().includes(name.toLowerCase())) {
+                achId = aid;
+                break;
+              }
+            }
+          }
           if (achId) Achievements.unlock(achId);
         }
       }
@@ -1038,10 +1073,15 @@ const Combat = (() => {
   }
 
   function handlePlayerInput() {
-    const stunned = _statusEffectsPlayer.some(e => e.type === 'stun' || e.type === 'freeze');
-    if (stunned) {
-      if (Input.actionPressed(Input.Actions.CONFIRM)) {
-        addLog('You are stunned!');
+    const stunnedEff = _statusEffectsPlayer.find(e => e.type === 'stun' || e.type === 'freeze');
+    if (stunnedEff) {
+      // Auto-skip after brief delay or on key press
+      if (Input.actionPressed(Input.Actions.CONFIRM) || Input.actionPressed(Input.Actions.CANCEL)) {
+        const sType = stunnedEff.type;
+        addLog(`You are ${sType === 'freeze' ? 'frozen' : 'stunned'} and cannot act!`);
+        if (typeof Particles !== 'undefined') {
+          Particles.emit(sType === 'freeze' ? 'ice' : 'stun', Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.4, 10);
+        }
         advanceTurn();
         scheduleNextNonPlayerTurn();
       }
@@ -1277,9 +1317,21 @@ const Combat = (() => {
     let peX = 20;
     const peY = h - 118 + _allies.length * 14 + 4;
     for (const eff of _statusEffectsPlayer) {
-      const c = { poison: '#a0f', burn: '#f80', freeze: '#08f', stun: '#ff0', defend: '#88f', regen: '#0f0', berserk: '#f44' }[eff.type] || '#fff';
-      Renderer.drawText(eff.type, peX, peY, c, 9);
-      peX += 45;
+      const c = { poison: '#a0f', burn: '#f80', freeze: '#08f', stun: '#ff0', defend: '#88f', regen: '#0f0', berserk: '#f44', iron_wall: '#48f', stealth: '#4f4' }[eff.type] || '#fff';
+      Renderer.drawText(`${eff.type}(${eff.turns})`, peX, peY, c, 9);
+      peX += 55;
+    }
+
+    // Flash STUNNED/FROZEN text when player is incapacitated
+    const playerStunned = _statusEffectsPlayer.find(e => e.type === 'stun' || e.type === 'freeze');
+    if (playerStunned && getCurrentTurnEntity().type === 'player' && !_animating) {
+      const sLabel = playerStunned.type === 'freeze' ? 'FROZEN!' : 'STUNNED!';
+      const sColor = playerStunned.type === 'freeze' ? '#08f' : '#ff0';
+      const pulse = Math.sin(GS.time * 6) * 0.3 + 0.7;
+      ctx.globalAlpha = pulse;
+      Renderer.drawText(sLabel, w * 0.15, h * 0.25, sColor, 22, 'center', true);
+      Renderer.drawText('Press ENTER to skip turn', w * 0.15, h * 0.25 + 28, '#888', 11, 'center');
+      ctx.globalAlpha = 1;
     }
 
     // Combo counter

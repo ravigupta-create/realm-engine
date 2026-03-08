@@ -1001,7 +1001,9 @@ const Menus = (() => {
     const streak = GS.dailyChallenges?.streak || 0;
     const totalDone = GS.dailyChallenges?.totalCompleted || 0;
     Renderer.drawText('DAILY CHALLENGES', w / 2, py + 18, '#f0c040', 22, 'center', true);
-    Renderer.drawText(`Streak: ${streak} days | Total: ${totalDone}`, w / 2, py + 40, '#888', 12, 'center');
+    // Reset timer
+    const resetTime = DailyChallenges.getTimeUntilReset();
+    Renderer.drawText(`Streak: ${streak} days | Total: ${totalDone} | Resets in ${resetTime.hours}h ${resetTime.minutes}m`, w / 2, py + 40, '#888', 11, 'center');
 
     const challenges = GS.dailyChallenges?.challenges || [];
 
@@ -1174,15 +1176,19 @@ const Menus = (() => {
         }
       }
 
-      // Combat bonus
+      // Combat bonus — user-friendly descriptions
       if (pet.combatBonus) {
-        Renderer.drawText('Combat:', dx, py2 + 4, '#888', 11);
+        Renderer.drawText('Combat Bonus:', dx, py2 + 4, '#888', 11);
         const cb = pet.combatBonus;
-        let cbText = cb.type;
-        if (cb.element) cbText += ` (${cb.element})`;
-        if (cb.amount) cbText += `: +${cb.amount}`;
-        if (cb.chance) cbText += ` ${Math.round(cb.chance * 100)}%`;
-        Renderer.drawText(cbText, dx + 10, py2 + 18, '#88f', 10);
+        const cbDescs = {
+          bonus_damage: `+${cb.amount || 5} bonus damage per hit`,
+          dot: `${Math.round((cb.chance || 0.1) * 100)}% chance to inflict ${cb.element || 'poison'} (${cb.damage || 3} dmg/turn)`,
+          crit_boost: `+${Math.round((cb.amount || 0.1) * 100)}% crit chance`,
+          gold_bonus: `${Math.round((cb.multiplier || 1.2) * 100 - 100)}% bonus gold from battles`,
+          mp_regen: `+${cb.amount || 3} MP per turn`,
+          revive: `Auto-revive at ${Math.round((cb.healPercent || 0.3) * 100)}% HP (once/battle)`
+        };
+        Renderer.drawText(cbDescs[cb.type] || cb.type, dx + 10, py2 + 18, '#88f', 10);
       }
 
       // Active indicator
