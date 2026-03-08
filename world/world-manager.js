@@ -6,13 +6,18 @@ const WorldManager = (() => {
   const GRID_SIZE = 4; // Spatial grid cell size in tiles
 
   function loadZone(zoneId, spawnX, spawnY) {
+    if (typeof Zones === 'undefined') return;
     const zone = Zones.getZone(zoneId);
-    if (!zone) return;
+    if (!zone) {
+      console.warn('Zone not found:', zoneId);
+      return;
+    }
 
     _currentZone = zone;
     GS.currentZone = zone;
 
     // Initialize explored tiles for this zone
+    if (!GS.exploredTiles) GS.exploredTiles = {};
     if (!GS.exploredTiles[zoneId]) {
       GS.exploredTiles[zoneId] = {};
     }

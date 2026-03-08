@@ -220,7 +220,7 @@ const SaveSystem = (() => {
     GS.entities.push(GS.player);
 
     // Load zone
-    WorldManager.loadZone(data.currentZone || 'eldergrove', p.x, p.y);
+    if (typeof WorldManager !== 'undefined') WorldManager.loadZone(data.currentZone || 'eldergrove', p.x, p.y);
 
     Core.setState(GameStates.PLAY);
     Core.addNotification('Game loaded!', 2);

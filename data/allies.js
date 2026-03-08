@@ -109,6 +109,7 @@ const Allies = (() => {
   }
 
   function recruitAlly(allyId) {
+    if (!GS.player) return null;
     const def = allyDefs[allyId];
     if (!def) return null;
     if (!GS.player.party) GS.player.party = [];
@@ -155,7 +156,7 @@ const Allies = (() => {
     const def = allyDefs[ally.id];
     if (!def) return;
     let xpNeeded = Math.floor(100 * Math.pow(1.5, ally.level - 1));
-    while (ally.xp >= xpNeeded) {
+    while (ally.xp >= xpNeeded && ally.level < 40) {
       ally.xp -= xpNeeded;
       ally.level++;
       for (const [k, v] of Object.entries(def.growth)) {

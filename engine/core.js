@@ -121,10 +121,18 @@ const Core = (() => {
     }
 
     // Update
-    for (const fn of _updateCallbacks) fn(dt);
+    try {
+      for (const fn of _updateCallbacks) fn(dt);
+    } catch (e) {
+      console.error('Update error:', e);
+    }
 
     // Render
-    for (const fn of _renderCallbacks) fn(dt);
+    try {
+      for (const fn of _renderCallbacks) fn(dt);
+    } catch (e) {
+      console.error('Render error:', e);
+    }
 
     requestAnimationFrame(loop);
   }

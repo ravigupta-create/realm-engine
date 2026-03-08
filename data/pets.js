@@ -71,6 +71,7 @@ const Pets = (() => {
   }
 
   function collectPet(petId) {
+    if (!GS.player) return false;
     if (!GS.player.pets) GS.player.pets = [];
     if (GS.player.pets.some(p => p.id === petId)) return false;
 
@@ -101,9 +102,10 @@ const Pets = (() => {
   }
 
   function addXP(pet, amount) {
+    if (!pet || pet.level >= 30) return; // Cap at level 30
     pet.xp += amount;
     if (typeof DailyChallenges !== 'undefined') DailyChallenges.onPetXP(amount);
-    while (pet.xp >= pet.xpToNext) {
+    while (pet.xp >= pet.xpToNext && pet.level < 30) {
       pet.xp -= pet.xpToNext;
       pet.level++;
       pet.xpToNext = Math.floor(50 * Math.pow(1.3, pet.level - 1));

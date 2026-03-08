@@ -305,6 +305,7 @@ const Quests = (() => {
   }
 
   function onEnemyKilled(enemyType, enemyName) {
+    if (!GS.quests) return;
     for (const quest of GS.quests) {
       if (quest.state !== 'active') continue;
 
@@ -329,6 +330,7 @@ const Quests = (() => {
   }
 
   function onZoneEntered(zoneId) {
+    if (!GS.quests) return;
     for (const quest of GS.quests) {
       if (quest.state !== 'active') continue;
 
@@ -344,6 +346,7 @@ const Quests = (() => {
   }
 
   function onChestOpened() {
+    if (!GS.quests) return;
     for (const quest of GS.quests) {
       if (quest.state !== 'active') continue;
 
@@ -360,6 +363,7 @@ const Quests = (() => {
   }
 
   function onMaterialCollected() {
+    if (!GS.quests) return;
     for (const quest of GS.quests) {
       if (quest.state !== 'active') continue;
 
@@ -376,7 +380,7 @@ const Quests = (() => {
   }
 
   function checkLevelQuests() {
-    if (!GS.player) return;
+    if (!GS.player || !GS.quests) return;
     for (const quest of GS.quests) {
       if (quest.state !== 'active') continue;
 
@@ -406,7 +410,7 @@ const Quests = (() => {
     if (quest.rewards) {
       if (quest.rewards.xp) {
         GS.player.stats.xp += quest.rewards.xp;
-        Combat.checkLevelUp();
+        if (typeof Combat !== 'undefined') Combat.checkLevelUp();
       }
       if (quest.rewards.gold) {
         GS.player.gold = (GS.player.gold || 0) + quest.rewards.gold;
@@ -440,6 +444,7 @@ const Quests = (() => {
   }
 
   function onFishCaught() {
+    if (!GS.quests) return;
     for (const quest of GS.quests) {
       if (quest.state !== 'active') continue;
       for (const obj of quest.objectives) {
@@ -454,6 +459,7 @@ const Quests = (() => {
   }
 
   function onItemCrafted() {
+    if (!GS.quests) return;
     for (const quest of GS.quests) {
       if (quest.state !== 'active') continue;
       for (const obj of quest.objectives) {
@@ -468,6 +474,7 @@ const Quests = (() => {
   }
 
   function onPetCollected() {
+    if (!GS.quests) return;
     for (const quest of GS.quests) {
       if (quest.state !== 'active') continue;
       for (const obj of quest.objectives) {

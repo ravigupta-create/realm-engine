@@ -176,6 +176,7 @@ const Combat = (() => {
     _turnCounter++;
     // Remove dead entities from turn order
     _turnOrder = _turnOrder.filter(t => {
+      if (!t.entity || !t.entity.stats) return false;
       if (t.type === 'enemy') return t.entity.stats.hp > 0;
       if (t.type === 'ally') return t.entity.stats.hp > 0;
       return true;
@@ -219,9 +220,9 @@ const Combat = (() => {
       if ((element === 'light' || element === 'holy') && mods.lightElementBonus) dmg = Math.floor(dmg * (1 + mods.lightElementBonus));
     }
 
-    // Combo bonus
+    // Combo bonus (capped at 10x = +100% max)
     if (_lastDamageType === element && element) {
-      _comboCounter++;
+      _comboCounter = Math.min(_comboCounter + 1, 10);
       dmg = Math.floor(dmg * (1 + _comboCounter * 0.1));
     } else {
       _comboCounter = 0;
@@ -240,9 +241,10 @@ const Combat = (() => {
       crit = true;
     }
 
-    // Difficulty/NG+ scaling
-    if (typeof NewGamePlus !== 'undefined' && GS.ngPlus) {
-      // NG+ enemies deal more damage
+    // NG+ enemies deal more damage to player
+    if (typeof NewGamePlus !== 'undefined' && attacker !== GS.player.stats) {
+      const eMult = NewGamePlus.getEnemyMultiplier();
+      if (eMult > 1) dmg = Math.floor(dmg * Math.sqrt(eMult)); // sqrt to avoid double-scaling with stat boost
     }
 
     return { dmg: Math.max(1, dmg), crit, element };
