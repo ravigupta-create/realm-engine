@@ -180,13 +180,16 @@ const Inventory = (() => {
     // Equipment bonuses
     const bonus = Items.getEquipmentBonus(GS.player.equipment);
 
-    GS.player.stats.maxHp = base.maxHp + (bonus.hp || 0);
-    GS.player.stats.maxMp = base.maxMp + (bonus.mp || 0);
-    GS.player.stats.str = base.str + (bonus.str || 0);
-    GS.player.stats.def = base.def + (bonus.def || 0);
-    GS.player.stats.int = base.int + (bonus.int || 0);
-    GS.player.stats.agi = base.agi + (bonus.agi || 0);
-    GS.player.stats.luk = base.luk + (bonus.luk || 0);
+    // Pet passive bonuses
+    const petBonus = (typeof Pets !== 'undefined') ? Pets.getPassiveBonus() : {};
+
+    GS.player.stats.maxHp = base.maxHp + (bonus.hp || 0) + (petBonus.hp || 0);
+    GS.player.stats.maxMp = base.maxMp + (bonus.mp || 0) + (petBonus.mp || 0);
+    GS.player.stats.str = base.str + (bonus.str || 0) + (petBonus.str || 0);
+    GS.player.stats.def = base.def + (bonus.def || 0) + (petBonus.def || 0);
+    GS.player.stats.int = base.int + (bonus.int || 0) + (petBonus.int || 0);
+    GS.player.stats.agi = base.agi + (bonus.agi || 0) + (petBonus.agi || 0);
+    GS.player.stats.luk = base.luk + (bonus.luk || 0) + (petBonus.luk || 0);
 
     // Clamp HP/MP
     GS.player.stats.hp = Math.min(GS.player.stats.hp, GS.player.stats.maxHp);

@@ -81,7 +81,7 @@ const Abilities = (() => {
     arcane_blast: {
       id: 'arcane_blast', name: 'Arcane Blast', class: 'mage', levelReq: 8,
       mpCost: 22, power: 2.5, type: 'damage', damageType: 'magical', element: 'arcane',
-      desc: 'Pure arcane energy.', sfx: 'magic', particleType: 'magic'
+      desc: 'Pure arcane energy.', sfx: 'arcane', particleType: 'magic'
     },
     regen: {
       id: 'regen', name: 'Regenerate', class: 'mage', levelReq: 10,
@@ -116,7 +116,8 @@ const Abilities = (() => {
     },
     double_strike: {
       id: 'double_strike', name: 'Double Strike', class: 'ranger', levelReq: 5,
-      mpCost: 14, power: 1.3, type: 'damage', damageType: 'physical',
+      mpCost: 14, power: 0.8, type: 'damage', damageType: 'physical',
+      hits: 2,
       desc: 'Strike twice quickly.', sfx: 'slash', particleType: 'hit'
     },
     stealth: {

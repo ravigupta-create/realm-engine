@@ -77,6 +77,7 @@ const AudioManager = (() => {
       case 'critical': sfxCritical(); break;
       case 'dodge': sfxDodge(); break;
       case 'death': sfxDeath(); break;
+      case 'arcane': sfxArcane(); break;
     }
   }
 
@@ -465,6 +466,34 @@ const AudioManager = (() => {
     gain.connect(_sfxGain);
     osc.start();
     osc.stop(_ctx.currentTime + 0.5);
+  }
+
+  function sfxArcane() {
+    // Ethereal warping sound — dual oscillators with phase modulation
+    const osc = _ctx.createOscillator();
+    const osc2 = _ctx.createOscillator();
+    const gain = _ctx.createGain();
+    const gain2 = _ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, _ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1800, _ctx.currentTime + 0.15);
+    osc.frequency.exponentialRampToValueAtTime(300, _ctx.currentTime + 0.4);
+    gain.gain.setValueAtTime(0.2, _ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + 0.45);
+    osc.connect(gain);
+    gain.connect(_sfxGain);
+    osc.start();
+    osc.stop(_ctx.currentTime + 0.45);
+    // Shimmer layer
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(1200, _ctx.currentTime);
+    osc2.frequency.exponentialRampToValueAtTime(400, _ctx.currentTime + 0.35);
+    gain2.gain.setValueAtTime(0.1, _ctx.currentTime + 0.05);
+    gain2.gain.exponentialRampToValueAtTime(0.01, _ctx.currentTime + 0.4);
+    osc2.connect(gain2);
+    gain2.connect(_sfxGain);
+    osc2.start(_ctx.currentTime + 0.05);
+    osc2.stop(_ctx.currentTime + 0.4);
   }
 
   // ======== MUSIC ========

@@ -112,6 +112,9 @@ const Combat = (() => {
     _playerDamageTaken = 0;
     _floatingNumbers.length = 0;
 
+    // Reset pet revive flag
+    if (GS.player.activePet) GS.player.activePet._reviveUsed = false;
+
     // Build turn order by AGI (all combatants)
     buildTurnOrder();
 
@@ -196,6 +199,13 @@ const Combat = (() => {
       }
     }
 
+    // Day/night element bonuses
+    if (typeof DayNight !== 'undefined') {
+      const mods = DayNight.getCombatModifiers();
+      if (element === 'dark' && mods.darkElementBonus) dmg = Math.floor(dmg * (1 + mods.darkElementBonus));
+      if ((element === 'light' || element === 'holy') && mods.lightElementBonus) dmg = Math.floor(dmg * (1 + mods.lightElementBonus));
+    }
+
     // Combo bonus
     if (_lastDamageType === element && element) {
       _comboCounter++;
@@ -205,8 +215,12 @@ const Combat = (() => {
     }
     _lastDamageType = element;
 
-    // Critical hit
-    const critChance = Utils.clamp(attacker.luk / 200, 0.02, 0.3);
+    // Critical hit (pet crit boost)
+    let critBoost = 0;
+    if (attacker === GS.player.stats && GS.player.activePet && GS.player.activePet.combatBonus && GS.player.activePet.combatBonus.type === 'crit_boost') {
+      critBoost = GS.player.activePet.combatBonus.amount || 0;
+    }
+    const critChance = Utils.clamp(attacker.luk / 200 + critBoost, 0.02, 0.5);
     let crit = false;
     if (Math.random() < critChance) {
       dmg = Math.floor(dmg * (1.5 + (attacker.luk / 100)));
@@ -257,6 +271,62 @@ const Combat = (() => {
 
   // ======== PLAYER ACTIONS ========
 
+  // Enchant special effects (lifesteal, thorns, mp_regen, etc.)
+  function applyEnchantEffects(dmgDealt) {
+    const eq = GS.player.equipment;
+    if (!eq) return;
+    for (const slot of ['weapon', 'armor', 'helmet', 'boots', 'ring', 'amulet']) {
+      const item = eq[slot];
+      if (!item || !item.enchant || !item.enchant.special) continue;
+      const sp = item.enchant.special;
+      if (sp === 'lifesteal' && dmgDealt > 0) {
+        const heal = Math.floor(dmgDealt * 0.15);
+        applyHeal(GS.player.stats, heal);
+        addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.35, `+${heal}`, '#0f0', 14);
+      } else if (sp === 'mp_on_hit' && dmgDealt > 0) {
+        const mp = Math.min(5, GS.player.stats.maxMp - GS.player.stats.mp);
+        GS.player.stats.mp += mp;
+        if (mp > 0) addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.4, `+${mp} MP`, '#88f', 12);
+      }
+    }
+  }
+
+  function applyThornsEffect(attacker) {
+    const eq = GS.player.equipment;
+    if (!eq) return;
+    for (const slot of ['weapon', 'armor', 'helmet', 'boots', 'ring', 'amulet']) {
+      const item = eq[slot];
+      if (!item || !item.enchant || !item.enchant.special) continue;
+      if (item.enchant.special === 'thorns') {
+        const thornDmg = Math.floor(GS.player.stats.def * 0.2);
+        applyDamage(attacker.stats, thornDmg);
+        addLog(`Thorns reflect ${thornDmg} damage!`);
+        addFloatingNumber(Renderer.getWidth() * 0.65, Renderer.getHeight() * 0.35, thornDmg, '#a86', 14);
+      }
+    }
+  }
+
+  // Pet combat bonus
+  function applyPetCombatBonus(dmgDealt, target) {
+    const pet = GS.player.activePet;
+    if (!pet || !pet.combatBonus) return;
+    const cb = pet.combatBonus;
+    if (cb.type === 'bonus_damage' && dmgDealt > 0) {
+      const bonus = cb.amount || 5;
+      applyDamage(target.stats, bonus);
+      addFloatingNumber(Renderer.getWidth() * 0.65, Renderer.getHeight() * 0.3, `+${bonus}`, '#f80', 12);
+    } else if (cb.type === 'dot' && Math.random() < (cb.chance || 0.1)) {
+      const effType = cb.element === 'freeze' ? 'freeze' : 'poison';
+      addStatusEffect(target, effType, 2, cb.damage || 3);
+      addLog(`${pet.name} inflicts ${effType}!`);
+    } else if (cb.type === 'crit_boost') {
+      // Handled in calcDamage
+    } else if (cb.type === 'mp_regen') {
+      const mp = Math.min(cb.amount || 3, GS.player.stats.maxMp - GS.player.stats.mp);
+      GS.player.stats.mp += mp;
+    }
+  }
+
   function playerAttack() {
     const target = getTargetEnemy();
     if (!target) return;
@@ -271,6 +341,8 @@ const Combat = (() => {
     if (typeof Particles !== 'undefined') {
       Particles.emit(crit ? 'critical' : 'hit', ex, Renderer.getHeight() * 0.4, crit ? 20 : 10);
     }
+    applyEnchantEffects(dmg);
+    applyPetCombatBonus(dmg, target);
     checkCombatEnd();
   }
 
@@ -322,7 +394,14 @@ const Combat = (() => {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('heal');
       if (typeof Particles !== 'undefined') Particles.emit('heal', Renderer.getWidth() * 0.25, Renderer.getHeight() * 0.5, 15);
     } else if (skill.type === 'buff') {
-      _statusEffectsPlayer.push({ type: skill.effect, turns: skill.duration || 3, ...skill.buffData });
+      const buff = { type: skill.effect, turns: skill.duration || 3, ...skill.buffData };
+      // Apply stat bonuses immediately
+      if (buff.strBonus) GS.player.stats.str += buff.strBonus;
+      if (buff.defBonus) GS.player.stats.def += buff.defBonus;
+      if (buff.agiBonus) GS.player.stats.agi += buff.agiBonus;
+      if (buff.intBonus) GS.player.stats.int += buff.intBonus;
+      if (buff.hpBonus) { GS.player.stats.maxHp += buff.hpBonus; GS.player.stats.hp += buff.hpBonus; }
+      _statusEffectsPlayer.push(buff);
       addLog(`${skill.name}: Buff applied!`);
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('buff');
       if (typeof Particles !== 'undefined') Particles.emit('buff', Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.4, 12);
@@ -338,7 +417,7 @@ const Combat = (() => {
       // Damage skill — AoE or single target
       const isPhysical = skill.damageType === 'physical';
       const element = skill.element || null;
-      const elementColors = { fire: '#f80', ice: '#8cf', lightning: '#ff0', dark: '#a0f', light: '#ffa', earth: '#a86' };
+      const elementColors = { fire: '#f80', ice: '#8cf', lightning: '#ff0', dark: '#a0f', light: '#ffa', earth: '#a86', arcane: '#c6f', poison: '#0a0' };
       const dmgColor = elementColors[element] || (crit => crit ? '#ff0' : '#fff');
 
       if (skill.targetType === 'all_enemies' || skill.aoe) {
@@ -358,12 +437,19 @@ const Combat = (() => {
       } else {
         const target = getTargetEnemy();
         if (!target) return false;
-        const { dmg, crit } = calcDamage(GS.player.stats, target.stats, isPhysical, skill.power, element);
-        applyDamage(target.stats, dmg);
-        addLog(`${skill.name} → ${target.name}: ${dmg}${crit ? ' CRIT!' : ''}`);
-        const esx = getEnemyScreenX(getLiveEnemies().indexOf(target));
-        const c = typeof dmgColor === 'function' ? dmgColor(crit) : dmgColor;
-        addFloatingNumber(esx, Renderer.getHeight() * 0.3, crit ? `${dmg} CRIT!` : dmg, c, crit ? 24 : 18);
+        const hitCount = skill.hits || 1;
+        let totalDmg = 0;
+        for (let hit = 0; hit < hitCount; hit++) {
+          if (target.stats.hp <= 0) break;
+          const { dmg, crit } = calcDamage(GS.player.stats, target.stats, isPhysical, skill.power, element);
+          applyDamage(target.stats, dmg);
+          totalDmg += dmg;
+          const esx = getEnemyScreenX(getLiveEnemies().indexOf(target));
+          const c = typeof dmgColor === 'function' ? dmgColor(crit) : dmgColor;
+          addFloatingNumber(esx + (hit * 15), Renderer.getHeight() * 0.3 - (hit * 15), crit ? `${dmg}!` : dmg, c, crit ? 24 : 18);
+          if (hitCount > 1) addLog(`${skill.name} hit ${hit + 1} → ${target.name}: ${dmg}${crit ? ' CRIT!' : ''}`);
+        }
+        if (hitCount === 1) addLog(`${skill.name} → ${target.name}: ${totalDmg}${''}`);
         if (skill.statusEffect && Math.random() < (skill.statusChance || 0.3)) {
           addStatusEffect(target, skill.statusEffect, skill.statusDuration || 3, skill.statusDamage || 0);
           addLog(`${target.name} is ${skill.statusEffect}!`);
@@ -388,11 +474,11 @@ const Combat = (() => {
       }
       _shakeTimer = 0.4;
       // Element-specific SFX
-      const sfxMap = { fire: 'fire', ice: 'ice', lightning: 'lightning', dark: 'dark', light: 'holy', holy: 'holy', earth: 'earth', poison: 'poison' };
+      const sfxMap = { fire: 'fire', ice: 'ice', lightning: 'lightning', dark: 'dark', light: 'holy', holy: 'holy', earth: 'earth', poison: 'poison', arcane: 'arcane' };
       const elementSfx = (element && sfxMap[element]) || skill.sfx || 'magic';
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX(elementSfx);
       if (typeof Particles !== 'undefined') {
-        const pTypeMap = { light: 'holy', arcane: 'magic' };
+        const pTypeMap = { light: 'holy', arcane: 'arcane' };
         const pType = pTypeMap[element] || element || skill.particleType || 'magic';
         Particles.emit(pType, Renderer.getWidth() * 0.65, Renderer.getHeight() * 0.4, 20);
       }
@@ -574,7 +660,7 @@ const Combat = (() => {
           }
         }
       }
-      const eSfxMap = { fire: 'fire', ice: 'ice', lightning: 'lightning', dark: 'dark', light: 'holy', holy: 'holy', earth: 'earth', poison: 'poison' };
+      const eSfxMap = { fire: 'fire', ice: 'ice', lightning: 'lightning', dark: 'dark', light: 'holy', holy: 'holy', earth: 'earth', poison: 'poison', arcane: 'arcane' };
       const elemSfx = (action.skill.element && eSfxMap[action.skill.element]) || action.skill.sfx || 'hit';
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX(elemSfx);
     } else if (action && action.type === 'heal') {
@@ -594,6 +680,9 @@ const Combat = (() => {
 
     _flashTimer = 0.3;
     _flashColor = 'rgba(255,0,0,0.3)';
+
+    // Thorns effect when player is hit
+    applyThornsEffect(enemy);
 
     // Process player status effects at end of enemy turns
     processPlayerEffects();
@@ -639,14 +728,18 @@ const Combat = (() => {
       } else if (eff.type === 'regen') {
         const heal = eff.damage || Math.floor(GS.player.stats.maxHp * 0.05);
         applyHeal(GS.player.stats, heal);
-      }
-      if (eff.type === 'defend') {
-        GS.player.stats.def -= eff.defBonus;
-        _statusEffectsPlayer.splice(i, 1);
-        continue;
+        addFloatingNumber(Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.35, `+${heal}`, '#0f0', 14);
       }
       eff.turns--;
-      if (eff.turns <= 0) _statusEffectsPlayer.splice(i, 1);
+      if (eff.turns <= 0) {
+        // Remove stat bonuses when buff expires
+        if (eff.strBonus) GS.player.stats.str -= eff.strBonus;
+        if (eff.defBonus) GS.player.stats.def -= eff.defBonus;
+        if (eff.agiBonus) GS.player.stats.agi -= eff.agiBonus;
+        if (eff.intBonus) GS.player.stats.int -= eff.intBonus;
+        if (eff.hpBonus) { GS.player.stats.maxHp -= eff.hpBonus; GS.player.stats.hp = Math.min(GS.player.stats.hp, GS.player.stats.maxHp); }
+        _statusEffectsPlayer.splice(i, 1);
+      }
     }
   }
 
@@ -658,6 +751,18 @@ const Combat = (() => {
       _resultTimer = 2;
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('victory');
     } else if (GS.player.stats.hp <= 0) {
+      // Pet auto-revive check
+      const pet = GS.player.activePet;
+      if (pet && pet.combatBonus && pet.combatBonus.type === 'revive' && !pet._reviveUsed) {
+        const healPct = pet.combatBonus.healPercent || 0.3;
+        GS.player.stats.hp = Math.floor(GS.player.stats.maxHp * healPct);
+        pet._reviveUsed = true;
+        addLog(`${pet.name} revives you!`);
+        Core.addNotification(`${pet.name} saved you from defeat!`, 3);
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('heal');
+        if (typeof Particles !== 'undefined') Particles.emit('holy', Renderer.getWidth() * 0.15, Renderer.getHeight() * 0.4, 20);
+        return;
+      }
       _combatResult = 'defeat';
       _resultTimer = 2;
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('defeat');
@@ -736,6 +841,18 @@ const Combat = (() => {
     const ngMult = GS.ngPlus ? (1 + GS.ngPlus * 0.5) : 1;
     totalXp = Math.floor(totalXp * ngMult);
     totalGold = Math.floor(totalGold * ngMult);
+
+    // Pet gold bonus
+    if (GS.player.activePet && GS.player.activePet.combatBonus && GS.player.activePet.combatBonus.type === 'gold_bonus') {
+      totalGold = Math.floor(totalGold * (GS.player.activePet.combatBonus.multiplier || 1));
+    }
+
+    // Night XP bonus
+    if (typeof DayNight !== 'undefined') {
+      const mods = DayNight.getCombatModifiers();
+      totalXp = Math.floor(totalXp * mods.xpMultiplier);
+      if (mods.isNight) addLog('Night bonus: +25% XP!');
+    }
 
     GS.player.stats.xp += totalXp;
     GS.player.gold = (GS.player.gold || 0) + totalGold;
@@ -837,17 +954,36 @@ const Combat = (() => {
     else if (_combatResult === 'defeat') handleDefeat();
     else if (_combatResult === 'final_victory') {
       handleVictory();
+      // Remove remaining combat buffs before transitioning
+      removeCombatBuffs();
       Core.setState(GameStates.VICTORY);
       return;
     }
 
+    // Remove remaining combat buffs so stats don't stay inflated
+    removeCombatBuffs();
+
     Core.setState(GameStates.PLAY);
     if (_combatResult === 'defeat') WorldManager.loadZone('eldergrove');
+
+    // Recalc stats to clean baseline
+    if (typeof Inventory !== 'undefined') Inventory.recalcStats();
 
     const zone = WorldManager.getZone();
     if (zone && typeof AudioManager !== 'undefined') AudioManager.playMusic(zone.music);
     _enemies = [];
     _allies = [];
+  }
+
+  function removeCombatBuffs() {
+    for (const eff of _statusEffectsPlayer) {
+      if (eff.strBonus) GS.player.stats.str -= eff.strBonus;
+      if (eff.defBonus) GS.player.stats.def -= eff.defBonus;
+      if (eff.agiBonus) GS.player.stats.agi -= eff.agiBonus;
+      if (eff.intBonus) GS.player.stats.int -= eff.intBonus;
+      if (eff.hpBonus) { GS.player.stats.maxHp -= eff.hpBonus; GS.player.stats.hp = Math.min(GS.player.stats.hp, GS.player.stats.maxHp); }
+    }
+    _statusEffectsPlayer = [];
   }
 
   // ======== UPDATE ========

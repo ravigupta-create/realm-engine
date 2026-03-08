@@ -150,6 +150,11 @@ const Particles = (() => {
       size: 4, gravity: 300, shrink: true,
       colors: ['#864', '#a86', '#642', '#ca8']
     },
+    arcane: {
+      count: 15, spread: 20, speed: 80, life: 0.7,
+      size: 3, gravity: -20, shrink: false,
+      colors: ['#a4f', '#c6f', '#84f', '#f4f', '#fff']
+    },
     critical: {
       count: 20, spread: 10, speed: 200, life: 0.4,
       size: 4, gravity: 0, shrink: true,

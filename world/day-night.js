@@ -99,5 +99,22 @@ const DayNight = (() => {
     }
   }
 
-  return { render, getTimeOfDay, getTimeName, getDarkness };
+  // Gameplay modifiers based on time of day
+  function getCombatModifiers() {
+    const { hours } = getTimeOfDay();
+    const isNight = hours >= 20 || hours < 6;
+    const isDawn = hours >= 5 && hours < 7;
+    const isDusk = hours >= 17 && hours < 20;
+    return {
+      isNight,
+      enemyStrBonus: isNight ? 0.15 : 0,     // Enemies 15% stronger at night
+      enemyAgiBonus: isNight ? 0.1 : 0,       // Enemies 10% faster at night
+      xpMultiplier: isNight ? 1.25 : 1,       // 25% bonus XP at night
+      darkElementBonus: isNight ? 0.2 : 0,    // Dark attacks +20% at night
+      lightElementBonus: isDawn || isDusk ? 0.15 : 0, // Light attacks +15% at dawn/dusk
+      encounterRate: isNight ? 1.3 : 1        // More encounters at night
+    };
+  }
+
+  return { render, getTimeOfDay, getTimeName, getDarkness, getCombatModifiers };
 })();
