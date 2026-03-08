@@ -3,17 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Realm Engine</title>
+  <meta name="description" content="Realm Engine — A deep single-player browser RPG with 10 classes, 30+ enemies, turn-based combat, and zero external assets. Free forever.">
+  <meta name="theme-color" content="#060610">
+  <meta name="color-scheme" content="dark">
+  <title>Realm Engine — Browser RPG</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23060610'/><text x='16' y='24' font-size='22' text-anchor='middle' fill='%23f0c040'>R</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- Loading Screen -->
   <div id="loading-screen">
-    <div>REALM ENGINE</div>
-    <div id="loading-bar-bg">
-      <div id="loading-bar"></div>
+    <div id="loading-logo">
+      <h1>REALM ENGINE</h1>
+      <div class="subtitle">A Browser RPG Adventure</div>
     </div>
-    <div id="loading-text">Initializing...</div>
+
+    <div class="divider">
+      <div class="diamond"></div>
+    </div>
+
+    <div id="loading-bar-container">
+      <div id="loading-bar-bg">
+        <div id="loading-bar"></div>
+      </div>
+    </div>
+    <div id="loading-text">Initializing<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></div>
+
+    <div id="loading-tip"></div>
+    <div id="loading-footer">100% Client-Side &bull; Zero External Assets &bull; Free Forever</div>
+    <div id="version-badge">v2.0</div>
   </div>
 
   <!-- Game Canvas -->
@@ -80,46 +98,63 @@
       const loadingBar = document.getElementById('loading-bar');
       const loadingText = document.getElementById('loading-text');
       const loadingScreen = document.getElementById('loading-screen');
+      const loadingTip = document.getElementById('loading-tip');
       const canvas = document.getElementById('game-canvas');
+
+      const tips = [
+        'Tip: Elemental weaknesses deal 1.5x damage!',
+        'Tip: Fishing at different zones yields different fish.',
+        'Tip: Complete all daily challenges for bonus gold.',
+        'Tip: Pets gain XP after each battle.',
+        'Tip: Enchanting adds permanent bonuses to equipment.',
+        'Tip: Some enemies are weak to light magic.',
+        'Tip: Recruit allies from NPCs in each zone.',
+        'Tip: Craft a Fishing Rod to unlock fishing.',
+        'Tip: The Bestiary tracks all monsters you encounter.',
+        'Tip: Higher luck increases rare item drop rates.',
+        'Tip: Combo attacks deal bonus elemental damage.',
+        'Tip: Try entering a special code on the title screen...'
+      ];
+      loadingTip.textContent = tips[Math.floor(Math.random() * tips.length)];
 
       function setProgress(pct, text) {
         loadingBar.style.width = pct + '%';
-        loadingText.textContent = text;
+        loadingText.innerHTML = text + '<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
       }
 
       async function boot() {
         try {
-          setProgress(10, 'Initializing engine...');
+          setProgress(10, 'Initializing engine');
 
           // Init renderer
           Renderer.init(canvas);
 
-          setProgress(20, 'Generating sprites...');
+          setProgress(20, 'Generating sprites');
           await new Promise(r => setTimeout(r, 50));
 
           // Generate all sprites
           SpriteGen.generateAll();
 
-          setProgress(50, 'Setting up input...');
+          setProgress(45, 'Setting up input');
           Input.init(canvas);
 
-          setProgress(60, 'Initializing audio...');
+          setProgress(55, 'Initializing audio');
           AudioManager.init();
 
-          setProgress(70, 'Setting up particles...');
+          setProgress(65, 'Setting up particles');
           Particles.init();
           Minimap.init();
 
-          setProgress(75, 'Initializing game systems...');
+          setProgress(75, 'Initializing game systems');
           Achievements.init();
           Bestiary.init();
           DailyChallenges.init();
           NewGamePlus.init();
 
-          setProgress(80, 'Registering systems...');
+          setProgress(85, 'Registering systems');
           Systems.registerAll();
 
-          setProgress(90, 'Starting game...');
+          setProgress(95, 'Preparing world');
 
           // Register update callbacks
           Core.onUpdate((dt) => {
