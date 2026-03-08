@@ -408,8 +408,8 @@ const Menus = (() => {
     s.level = 30;
     s.xp = 0;
     s.xpToNext = 99999;
-    s.gold = 99999;
-    player.gold = 99999;
+    s.gold = 9999999;
+    player.gold = 9999999;
     s.maxHp = 999; s.hp = 999;
     s.maxMp = 999; s.mp = 999;
     s.str = 99; s.def = 99; s.int = 99; s.agi = 99; s.luk = 99;

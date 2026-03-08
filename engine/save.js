@@ -64,7 +64,9 @@ const SaveSystem = (() => {
       bestiary: GS.bestiary || {},
       bestiaryRewards: GS.bestiaryRewards || {},
       // Daily challenges
-      dailyChallenges: GS.dailyChallenges ? JSON.parse(JSON.stringify(GS.dailyChallenges)) : null
+      dailyChallenges: GS.dailyChallenges ? JSON.parse(JSON.stringify(GS.dailyChallenges)) : null,
+      // Cheat mode
+      cheatActive: GS.cheatActive || false
     };
   }
 
@@ -208,6 +210,9 @@ const SaveSystem = (() => {
 
     // Main quest flag
     GS.mainQuestComplete = data.mainQuestComplete || false;
+
+    // Cheat mode
+    GS.cheatActive = data.cheatActive || false;
 
     // Re-init achievements counters
     if (typeof Achievements !== 'undefined') Achievements.init();

@@ -44,6 +44,9 @@ const WorldManager = (() => {
       AudioManager.playMusic(zone.music);
     }
 
+    // Reset party trail so allies snap to player in new zone
+    if (typeof Systems !== 'undefined' && Systems.resetPartyTrail) Systems.resetPartyTrail();
+
     // Zone event hooks
     if (typeof Quests !== 'undefined') Quests.onZoneEntered(zoneId);
     if (typeof DailyChallenges !== 'undefined') DailyChallenges.onZoneVisited();

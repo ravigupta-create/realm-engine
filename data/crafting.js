@@ -157,15 +157,17 @@ const Crafting = (() => {
   }
 
   function craft(recipe, player) {
-    if (!canCraft(recipe, player.items)) return null;
+    if (!GS.cheatActive && !canCraft(recipe, player.items)) return null;
 
-    // Remove materials
-    for (const mat of recipe.materials) {
-      let remaining = mat.count;
-      for (let i = player.items.length - 1; i >= 0 && remaining > 0; i--) {
-        if (player.items[i].name === mat.name && player.items[i].type === 'material') {
-          player.items.splice(i, 1);
-          remaining--;
+    // Remove materials (skipped in cheat mode)
+    if (!GS.cheatActive) {
+      for (const mat of recipe.materials) {
+        let remaining = mat.count;
+        for (let i = player.items.length - 1; i >= 0 && remaining > 0; i--) {
+          if (player.items[i].name === mat.name && player.items[i].type === 'material') {
+            player.items.splice(i, 1);
+            remaining--;
+          }
         }
       }
     }
@@ -192,7 +194,7 @@ const Crafting = (() => {
   function getAvailableRecipes(player) {
     return recipes.map(r => ({
       ...r,
-      canCraft: canCraft(r, player.items)
+      canCraft: GS.cheatActive || canCraft(r, player.items)
     }));
   }
 

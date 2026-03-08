@@ -122,19 +122,22 @@ const Enchanting = (() => {
       return { ok: false, reason: `This enchant is for ${def.slot} slots` };
     }
 
-    // Check gold
-    if ((GS.player.gold || 0) < def.cost.gold) {
-      return { ok: false, reason: `Need ${def.cost.gold} gold` };
-    }
+    // Cheat mode bypasses cost checks
+    if (!GS.cheatActive) {
+      // Check gold
+      if ((GS.player.gold || 0) < def.cost.gold) {
+        return { ok: false, reason: `Need ${def.cost.gold} gold` };
+      }
 
-    // Check materials
-    if (def.cost.materials) {
-      const inv = GS.player.items || [];
-      for (const [matId, qty] of Object.entries(def.cost.materials)) {
-        const matName = matId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        const have = inv.filter(i => i && i.type === 'material' && (i.name === matName || i.name.toLowerCase() === matId.replace(/_/g, ' '))).length;
-        if (have < qty) {
-          return { ok: false, reason: `Need ${qty}x ${matName}` };
+      // Check materials
+      if (def.cost.materials) {
+        const inv = GS.player.items || [];
+        for (const [matId, qty] of Object.entries(def.cost.materials)) {
+          const matName = matId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          const have = inv.filter(i => i && i.type === 'material' && (i.name === matName || i.name.toLowerCase() === matId.replace(/_/g, ' '))).length;
+          if (have < qty) {
+            return { ok: false, reason: `Need ${qty}x ${matName}` };
+          }
         }
       }
     }
@@ -148,20 +151,21 @@ const Enchanting = (() => {
 
     const def = enchantDefs[enchantId];
 
-    // Consume gold
-    GS.player.gold = (GS.player.gold || 0) - def.cost.gold;
-    GS.player.stats.gold = GS.player.gold;
+    // Consume gold and materials (skipped in cheat mode)
+    if (!GS.cheatActive) {
+      GS.player.gold = (GS.player.gold || 0) - def.cost.gold;
+      GS.player.stats.gold = GS.player.gold;
 
-    // Consume materials
-    if (def.cost.materials) {
-      for (const [matId, qty] of Object.entries(def.cost.materials)) {
-        let remaining = qty;
-        const items = GS.player.items;
-        const matName = matId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        for (let i = items.length - 1; i >= 0 && remaining > 0; i--) {
-          if (items[i] && items[i].type === 'material' && (items[i].name === matName || items[i].name.toLowerCase() === matId.replace(/_/g, ' '))) {
-            items.splice(i, 1);
-            remaining--;
+      if (def.cost.materials) {
+        for (const [matId, qty] of Object.entries(def.cost.materials)) {
+          let remaining = qty;
+          const items = GS.player.items;
+          const matName = matId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          for (let i = items.length - 1; i >= 0 && remaining > 0; i--) {
+            if (items[i] && items[i].type === 'material' && (items[i].name === matName || items[i].name.toLowerCase() === matId.replace(/_/g, ' '))) {
+              items.splice(i, 1);
+              remaining--;
+            }
           }
         }
       }

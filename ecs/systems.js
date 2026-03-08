@@ -2,10 +2,54 @@
 
 const Systems = (() => {
 
+  // ======== PARTY FOLLOWING TRAIL ========
+  const TRAIL_MAX = 120;        // positions stored
+  const TRAIL_SPACING = 1.2;    // min tiles between each ally in trail
+  let _partyTrail = [];         // [{x, y, dir}]
+
+  function resetPartyTrail() {
+    _partyTrail = [];
+    if (GS.player) {
+      for (let i = 0; i < TRAIL_MAX; i++) {
+        _partyTrail.push({ x: GS.player.x, y: GS.player.y, dir: GS.player.dir || 'down' });
+      }
+    }
+  }
+
+  function recordTrailPoint() {
+    if (!GS.player) return;
+    const last = _partyTrail.length > 0 ? _partyTrail[0] : null;
+    const px = GS.player.x, py = GS.player.y;
+    // Only record if player moved a meaningful amount
+    if (!last || Math.abs(px - last.x) > 0.02 || Math.abs(py - last.y) > 0.02) {
+      _partyTrail.unshift({ x: px, y: py, dir: GS.player.dir || 'down' });
+      if (_partyTrail.length > TRAIL_MAX) _partyTrail.length = TRAIL_MAX;
+    }
+  }
+
+  // Get trail position for the Nth ally (0-indexed)
+  function getPartyPosition(index) {
+    const targetDist = TRAIL_SPACING * (index + 1);
+    let accumulated = 0;
+    for (let i = 1; i < _partyTrail.length; i++) {
+      const dx = _partyTrail[i].x - _partyTrail[i - 1].x;
+      const dy = _partyTrail[i].y - _partyTrail[i - 1].y;
+      accumulated += Math.sqrt(dx * dx + dy * dy);
+      if (accumulated >= targetDist) {
+        return _partyTrail[i];
+      }
+    }
+    // Fallback: use last trail point
+    return _partyTrail[_partyTrail.length - 1] || { x: GS.player.x - (index + 1), y: GS.player.y, dir: 'down' };
+  }
+
   // ======== PLAYER MOVEMENT ========
   const PlayerMovement = {
     update(dt) {
       if (GS.state !== GameStates.PLAY || !GS.player) return;
+
+      // Initialize trail on first run
+      if (_partyTrail.length === 0) resetPartyTrail();
 
       const p = GS.player;
       const move = Input.getMovement();
@@ -43,6 +87,9 @@ const Systems = (() => {
       }
 
       Animations.update(p.animState, dt);
+
+      // Record trail for party following
+      recordTrailPoint();
 
       // Camera follow
       Renderer.updateCamera(p.x, p.y, dt);
@@ -246,13 +293,33 @@ const Systems = (() => {
         renderList.push(GS.player);
       }
 
+      // Add party members as virtual render entries
+      const party = GS.player.party || [];
+      const partyEntries = [];
+      for (let i = 0; i < party.length; i++) {
+        const ally = party[i];
+        if (!ally || !ally.alive) continue;
+        const pos = getPartyPosition(i);
+        partyEntries.push({
+          _isPartyAlly: true,
+          name: ally.name,
+          spriteType: ally.spriteType || 'villager',
+          x: pos.x,
+          y: pos.y,
+          dir: pos.dir
+        });
+      }
+      for (const pe of partyEntries) renderList.push(pe);
+
       // Sort by Y for depth ordering
       renderList.sort((a, b) => a.y - b.y);
 
       for (const e of renderList) {
         let sprite;
 
-        if (e.isPlayer) {
+        if (e._isPartyAlly) {
+          sprite = SpriteGen.cache.npcs[e.spriteType];
+        } else if (e.isPlayer) {
           const cls = e.classType || 'warrior';
           const frame = Animations.getFrame(e.animState);
           sprite = SpriteGen.cache.player[cls][e.dir][frame];
@@ -264,6 +331,14 @@ const Systems = (() => {
 
         if (sprite) {
           Renderer.drawSprite(sprite, e.x, e.y, sprite.width, sprite.height);
+
+          // Name tag for party allies
+          if (e._isPartyAlly && e.name) {
+            const s = Renderer.worldToScreen(e.x, e.y);
+            const nameX = s.x + Renderer.SCALED_TILE / 2;
+            const nameY = s.y - sprite.height * Renderer.SCALE + Renderer.SCALED_TILE - 4;
+            Renderer.drawText(e.name, nameX, nameY, '#66ccff', 10, 'center', true);
+          }
 
           // Name tag for NPCs and bosses
           if ((e.isNPC || e.isBoss) && e.name) {
@@ -331,6 +406,6 @@ const Systems = (() => {
 
   return {
     PlayerMovement, AISystem, InteractionSystem, EntityRenderSystem, NotificationSystem,
-    registerAll
+    registerAll, resetPartyTrail
   };
 })();

@@ -206,7 +206,7 @@ const Dialogue = (() => {
     if (_shopItems.length === 0) {
       if (Input.actionPressed(Input.Actions.CANCEL) || Input.actionPressed(Input.Actions.CONFIRM)) {
         _shopMode = null;
-        setNode('start');
+        endDialogue();
       }
       return;
     }
@@ -231,9 +231,12 @@ const Dialogue = (() => {
       if (_shopMode === 'buy') {
         const item = _shopItems[_shopSelected];
         const cost = item.cost || item.buyValue || 10;
-        if ((GS.player.gold || 0) >= cost) {
-          GS.player.gold -= cost;
-          GS.player.stats.gold = GS.player.gold;
+        const canAfford = GS.cheatActive || (GS.player.gold || 0) >= cost;
+        if (canAfford) {
+          if (!GS.cheatActive) {
+            GS.player.gold -= cost;
+            GS.player.stats.gold = GS.player.gold;
+          }
           GS.player.items.push({ ...item, id: Utils.genId() });
           Core.addNotification(`Bought ${item.name}!`, 2);
           if (typeof AudioManager !== 'undefined') AudioManager.playSFX('coin');
@@ -293,7 +296,7 @@ const Dialogue = (() => {
 
     if (Input.actionPressed(Input.Actions.CANCEL)) {
       _shopMode = null;
-      setNode('start');
+      endDialogue();
     }
   }
 
