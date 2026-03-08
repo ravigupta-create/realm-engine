@@ -418,11 +418,23 @@ const SpriteGen = (() => {
     let bodyColor, hairColor, armorColor;
     switch (classType) {
       case 'mage':
-        bodyColor = '#3344aa'; armorColor = '#4455bb'; hairColor = '#eee';
-        break;
+        bodyColor = '#3344aa'; armorColor = '#4455bb'; hairColor = '#eee'; break;
       case 'ranger':
-        bodyColor = '#2a6a2a'; armorColor = '#3a7a3a'; hairColor = '#8B4513';
-        break;
+        bodyColor = '#2a6a2a'; armorColor = '#3a7a3a'; hairColor = '#8B4513'; break;
+      case 'paladin':
+        bodyColor = '#dda520'; armorColor = '#eebb30'; hairColor = '#ffd700'; break;
+      case 'rogue':
+        bodyColor = '#333'; armorColor = '#444'; hairColor = '#222'; break;
+      case 'necromancer':
+        bodyColor = '#3a0a4a'; armorColor = '#4a1a5a'; hairColor = '#ccc'; break;
+      case 'druid':
+        bodyColor = '#228b22'; armorColor = '#33aa33'; hairColor = '#5a3a1a'; break;
+      case 'monk':
+        bodyColor = '#d2691e'; armorColor = '#e0802e'; hairColor = '#222'; break;
+      case 'bard':
+        bodyColor = '#ff69b4'; armorColor = '#ff88cc'; hairColor = '#ffcc00'; break;
+      case 'summoner':
+        bodyColor = '#00ced1'; armorColor = '#22dde2'; hairColor = '#aaf'; break;
       default: // warrior
         bodyColor = '#888'; armorColor = '#999'; hairColor = '#5a3010';
     }
@@ -759,6 +771,292 @@ const SpriteGen = (() => {
         ctx.fillRect(10, 3, 1, 2);
         break;
 
+      case 'spider':
+        ctx.fillStyle = '#443322';
+        ctx.fillRect(5, 12, 6, 4);
+        ctx.fillRect(4, 13, 8, 2);
+        ctx.fillStyle = '#332211';
+        // Legs (4 per side)
+        ctx.fillRect(1, 10, 3, 1); ctx.fillRect(1, 12, 3, 1);
+        ctx.fillRect(1, 14, 3, 1); ctx.fillRect(1, 16, 3, 1);
+        ctx.fillRect(12, 10, 3, 1); ctx.fillRect(12, 12, 3, 1);
+        ctx.fillRect(12, 14, 3, 1); ctx.fillRect(12, 16, 3, 1);
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(6, 12, 1, 1); ctx.fillRect(9, 12, 1, 1);
+        break;
+
+      case 'mushroom':
+        ctx.fillStyle = '#dd4444';
+        ctx.fillRect(3, 8, 10, 5);
+        ctx.fillRect(5, 6, 6, 2);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(5, 9, 2, 2); ctx.fillRect(9, 9, 2, 2);
+        ctx.fillStyle = '#ddcc88';
+        ctx.fillRect(6, 13, 4, 8);
+        ctx.fillRect(5, 14, 6, 5);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(6, 10, 1, 1); ctx.fillRect(9, 10, 1, 1);
+        break;
+
+      case 'fire_imp':
+        ctx.fillStyle = '#ff4422';
+        ctx.fillRect(5, 4, 6, 5);
+        ctx.fillRect(4, 5, 8, 3);
+        ctx.fillStyle = '#ff8800';
+        ctx.fillRect(3, 3, 2, 2); ctx.fillRect(11, 3, 2, 2); // horns
+        ctx.fillStyle = '#dd3311';
+        ctx.fillRect(5, 9, 6, 8);
+        ctx.fillRect(3, 10, 2, 4); ctx.fillRect(11, 10, 2, 4);
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillRect(6, 6, 1, 1); ctx.fillRect(9, 6, 1, 1);
+        ctx.fillStyle = '#ff4422';
+        ctx.fillRect(5, 17, 3, 5); ctx.fillRect(8, 17, 3, 5);
+        break;
+
+      case 'sand_wurm':
+        ctx.fillStyle = '#cc9955';
+        ctx.fillRect(4, 8, 8, 12);
+        ctx.fillRect(3, 10, 10, 8);
+        ctx.fillStyle = '#ddaa66';
+        ctx.fillRect(5, 9, 6, 4);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(5, 10, 2, 2); ctx.fillRect(9, 10, 2, 2);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(6, 11, 1, 1); ctx.fillRect(10, 11, 1, 1);
+        ctx.fillRect(6, 14, 4, 1);
+        break;
+
+      case 'wraith':
+        ctx.fillStyle = 'rgba(100,50,150,0.7)';
+        ctx.fillRect(4, 4, 8, 14);
+        ctx.fillRect(3, 6, 10, 10);
+        ctx.fillStyle = 'rgba(80,40,120,0.6)';
+        ctx.fillRect(4, 18, 2, 3); ctx.fillRect(10, 18, 2, 3);
+        ctx.fillStyle = '#ff00ff';
+        ctx.fillRect(6, 8, 2, 2); ctx.fillRect(9, 8, 2, 2);
+        break;
+
+      case 'treant':
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(5, 6, 6, 16);
+        ctx.fillRect(4, 8, 8, 12);
+        ctx.fillStyle = '#3a7d32';
+        ctx.fillRect(2, 2, 12, 7);
+        ctx.fillRect(3, 1, 10, 3);
+        ctx.fillStyle = '#ff8800';
+        ctx.fillRect(6, 10, 2, 2); ctx.fillRect(9, 10, 2, 2);
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(2, 12, 3, 1); ctx.fillRect(11, 12, 3, 1);
+        break;
+
+      case 'harpy':
+        ctx.fillStyle = '#e8b888';
+        ctx.fillRect(6, 4, 4, 4);
+        ctx.fillStyle = '#8866aa';
+        ctx.fillRect(5, 8, 6, 8);
+        ctx.fillStyle = '#aa88cc';
+        ctx.fillRect(1, 6, 4, 6); ctx.fillRect(11, 6, 4, 6); // wings
+        ctx.fillRect(0, 7, 2, 4); ctx.fillRect(14, 7, 2, 4);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(7, 5, 1, 1); ctx.fillRect(8, 5, 1, 1);
+        break;
+
+      case 'mimic':
+        ctx.fillStyle = '#8B6914';
+        ctx.fillRect(2, 10, 12, 8);
+        ctx.fillStyle = '#a07818';
+        ctx.fillRect(3, 8, 10, 2);
+        ctx.fillStyle = '#cca000';
+        ctx.fillRect(3, 9, 10, 1);
+        ctx.fillStyle = '#ff0';
+        ctx.fillRect(5, 12, 2, 2); ctx.fillRect(9, 12, 2, 2);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(4, 14, 8, 1);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(4, 15, 1, 1); ctx.fillRect(6, 15, 1, 1);
+        ctx.fillRect(9, 15, 1, 1); ctx.fillRect(11, 15, 1, 1);
+        break;
+
+      case 'gargoyle':
+        ctx.fillStyle = '#667';
+        ctx.fillRect(5, 4, 6, 6);
+        ctx.fillRect(4, 10, 8, 8);
+        ctx.fillStyle = '#556';
+        ctx.fillRect(2, 6, 3, 5); ctx.fillRect(11, 6, 3, 5); // wings
+        ctx.fillStyle = '#ff6600';
+        ctx.fillRect(6, 6, 2, 2); ctx.fillRect(9, 6, 2, 2);
+        ctx.fillStyle = '#667';
+        ctx.fillRect(5, 18, 3, 5); ctx.fillRect(8, 18, 3, 5);
+        break;
+
+      case 'necromancer_enemy':
+        ctx.fillStyle = '#2a0a3a';
+        ctx.fillRect(5, 2, 6, 6);
+        ctx.fillRect(4, 8, 8, 12);
+        ctx.fillStyle = '#3a1a4a';
+        ctx.fillRect(3, 9, 10, 8);
+        ctx.fillStyle = '#aa00ff';
+        ctx.fillRect(6, 4, 1, 2); ctx.fillRect(9, 4, 1, 2);
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(13, 4, 1, 14);
+        ctx.fillStyle = '#aa00ff';
+        ctx.fillRect(12, 3, 3, 2);
+        break;
+
+      case 'frost_wolf':
+        ctx.fillStyle = '#aaccee';
+        ctx.fillRect(3, 12, 10, 6);
+        ctx.fillRect(2, 14, 2, 3);
+        ctx.fillStyle = '#bbddff';
+        ctx.fillRect(4, 13, 4, 4);
+        ctx.fillRect(11, 10, 4, 5);
+        ctx.fillStyle = '#8ab';
+        ctx.fillRect(13, 12, 2, 2);
+        ctx.fillStyle = '#4af';
+        ctx.fillRect(12, 11, 1, 1);
+        ctx.fillStyle = '#99bbdd';
+        ctx.fillRect(4, 18, 2, 5); ctx.fillRect(9, 18, 2, 5);
+        ctx.fillRect(1, 11, 2, 1);
+        break;
+
+      case 'lava_golem':
+        ctx.fillStyle = '#aa3300';
+        ctx.fillRect(4, 2, 8, 8);
+        ctx.fillRect(3, 4, 10, 4);
+        ctx.fillStyle = '#ff6600';
+        ctx.fillRect(5, 5, 2, 2); ctx.fillRect(9, 5, 2, 2);
+        ctx.fillStyle = '#882200';
+        ctx.fillRect(3, 10, 10, 10);
+        ctx.fillRect(1, 11, 3, 6); ctx.fillRect(12, 11, 3, 6);
+        ctx.fillStyle = '#aa3300';
+        ctx.fillRect(4, 20, 3, 5); ctx.fillRect(9, 20, 3, 5);
+        ctx.fillStyle = '#ff4400';
+        ctx.fillRect(5, 12, 2, 1); ctx.fillRect(8, 14, 3, 1);
+        break;
+
+      case 'shadow_assassin':
+        ctx.fillStyle = '#222';
+        ctx.fillRect(5, 2, 6, 6);
+        ctx.fillStyle = '#333';
+        ctx.fillRect(4, 8, 8, 10);
+        ctx.fillStyle = '#c00';
+        ctx.fillRect(6, 4, 1, 2); ctx.fillRect(9, 4, 1, 2);
+        ctx.fillStyle = '#aaa';
+        ctx.fillRect(12, 8, 1, 8);
+        ctx.fillStyle = '#222';
+        ctx.fillRect(5, 18, 3, 5); ctx.fillRect(8, 18, 3, 5);
+        break;
+
+      case 'crystal_golem':
+        ctx.fillStyle = '#88aaff';
+        ctx.fillRect(4, 2, 8, 8);
+        ctx.fillStyle = '#aaccff';
+        ctx.fillRect(5, 3, 6, 6);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(6, 5, 2, 2); ctx.fillRect(9, 5, 2, 2);
+        ctx.fillStyle = '#7799ee';
+        ctx.fillRect(3, 10, 10, 10);
+        ctx.fillRect(1, 11, 3, 6); ctx.fillRect(12, 11, 3, 6);
+        ctx.fillStyle = '#88aaff';
+        ctx.fillRect(4, 20, 3, 5); ctx.fillRect(9, 20, 3, 5);
+        break;
+
+      case 'demon':
+        ctx.fillStyle = '#881111';
+        ctx.fillRect(5, 4, 6, 5);
+        ctx.fillStyle = '#aa0000';
+        ctx.fillRect(3, 2, 2, 3); ctx.fillRect(11, 2, 2, 3); // horns
+        ctx.fillStyle = '#771111';
+        ctx.fillRect(4, 9, 8, 10);
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillRect(6, 6, 1, 1); ctx.fillRect(9, 6, 1, 1);
+        ctx.fillStyle = '#881111';
+        ctx.fillRect(5, 19, 3, 5); ctx.fillRect(8, 19, 3, 5);
+        ctx.fillRect(2, 10, 2, 5); ctx.fillRect(12, 10, 2, 5);
+        break;
+
+      case 'lich':
+        ctx.fillStyle = '#334';
+        ctx.fillRect(5, 2, 6, 6);
+        ctx.fillStyle = '#223';
+        ctx.fillRect(4, 8, 8, 12);
+        ctx.fillRect(3, 9, 10, 8);
+        ctx.fillStyle = '#00ff88';
+        ctx.fillRect(6, 4, 1, 2); ctx.fillRect(9, 4, 1, 2);
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(13, 2, 1, 16);
+        ctx.fillStyle = '#00ff88';
+        ctx.fillRect(12, 1, 3, 2);
+        break;
+
+      case 'yeti':
+        ctx.fillStyle = '#eee';
+        ctx.fillRect(4, 3, 8, 8);
+        ctx.fillRect(3, 5, 10, 4);
+        ctx.fillStyle = '#ddd';
+        ctx.fillRect(3, 11, 10, 10);
+        ctx.fillRect(1, 12, 3, 6); ctx.fillRect(12, 12, 3, 6);
+        ctx.fillStyle = '#339';
+        ctx.fillRect(6, 6, 2, 2); ctx.fillRect(9, 6, 2, 2);
+        ctx.fillStyle = '#ccc';
+        ctx.fillRect(4, 21, 3, 5); ctx.fillRect(9, 21, 3, 5);
+        break;
+
+      case 'blood_knight':
+        ctx.fillStyle = '#550000';
+        ctx.fillRect(5, 2, 6, 6);
+        ctx.fillStyle = '#660000';
+        ctx.fillRect(4, 8, 8, 10);
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(6, 4, 4, 2);
+        ctx.fillStyle = '#550000';
+        ctx.fillRect(2, 9, 2, 6); ctx.fillRect(12, 9, 2, 6);
+        ctx.fillStyle = '#cc0000';
+        ctx.fillRect(13, 4, 1, 10);
+        ctx.fillStyle = '#550000';
+        ctx.fillRect(5, 18, 3, 6); ctx.fillRect(8, 18, 3, 6);
+        break;
+
+      case 'elemental_lord':
+        ctx.fillStyle = '#ff6600';
+        ctx.fillRect(4, 4, 8, 14);
+        ctx.fillRect(3, 6, 10, 10);
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillRect(5, 5, 6, 4);
+        ctx.fillRect(2, 8, 1, 4); ctx.fillRect(13, 6, 1, 5);
+        ctx.fillRect(6, 2, 1, 3); ctx.fillRect(10, 3, 1, 2);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(6, 7, 2, 2); ctx.fillRect(9, 7, 2, 2);
+        break;
+
+      case 'void_horror':
+        ctx.fillStyle = '#1a0a2a';
+        ctx.fillRect(3, 4, 10, 14);
+        ctx.fillRect(2, 6, 12, 10);
+        ctx.fillStyle = '#330066';
+        ctx.fillRect(4, 5, 8, 4);
+        ctx.fillStyle = '#ff00ff';
+        ctx.fillRect(5, 7, 2, 2); ctx.fillRect(9, 7, 2, 2);
+        ctx.fillStyle = '#1a0a2a';
+        ctx.fillRect(0, 8, 3, 6); ctx.fillRect(13, 8, 3, 6);
+        ctx.fillRect(4, 18, 3, 5); ctx.fillRect(9, 18, 3, 5);
+        break;
+
+      case 'phoenix_enemy':
+        ctx.fillStyle = '#ff4400';
+        ctx.fillRect(5, 6, 6, 8);
+        ctx.fillRect(4, 8, 8, 4);
+        ctx.fillStyle = '#ffaa00';
+        ctx.fillRect(6, 7, 4, 4);
+        ctx.fillStyle = '#ff6600';
+        ctx.fillRect(1, 4, 4, 6); ctx.fillRect(11, 4, 4, 6); // wings
+        ctx.fillRect(0, 5, 2, 4); ctx.fillRect(14, 5, 2, 4);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(7, 8, 1, 1); ctx.fillRect(8, 8, 1, 1);
+        ctx.fillStyle = '#ff0';
+        ctx.fillRect(6, 14, 4, 3); // tail
+        break;
+
       default: // generic
         ctx.fillStyle = '#a44';
         ctx.fillRect(4, 4, 8, 14);
@@ -973,6 +1271,52 @@ const SpriteGen = (() => {
         ctx.fillRect(10, 8, 4, 12);
         ctx.fillRect(34, 8, 4, 12);
         break;
+      case 'paladin':
+        hairColor = '#ffd700'; eyeColor = '#cc8800';
+        ctx.fillStyle = hairColor;
+        ctx.fillRect(10, 4, 28, 10);
+        ctx.fillRect(10, 4, 4, 14);
+        ctx.fillRect(34, 4, 4, 14);
+        break;
+      case 'rogue':
+        hairColor = '#222'; eyeColor = '#444';
+        ctx.fillStyle = hairColor;
+        ctx.fillRect(12, 6, 24, 6);
+        ctx.fillRect(10, 8, 4, 8);
+        break;
+      case 'necromancer':
+        hairColor = '#ccc'; eyeColor = '#a0f';
+        ctx.fillStyle = hairColor;
+        ctx.fillRect(10, 4, 28, 10);
+        ctx.fillRect(10, 4, 4, 22);
+        ctx.fillRect(34, 4, 4, 22);
+        break;
+      case 'druid':
+        hairColor = '#5a3a1a'; eyeColor = '#2a2';
+        ctx.fillStyle = hairColor;
+        ctx.fillRect(10, 4, 28, 10);
+        ctx.fillRect(10, 4, 4, 18);
+        ctx.fillRect(34, 4, 4, 18);
+        break;
+      case 'monk':
+        hairColor = '#222'; eyeColor = '#886';
+        ctx.fillStyle = hairColor;
+        ctx.fillRect(14, 6, 20, 4);
+        break;
+      case 'bard':
+        hairColor = '#ffcc00'; eyeColor = '#f6b';
+        ctx.fillStyle = hairColor;
+        ctx.fillRect(10, 4, 28, 10);
+        ctx.fillRect(10, 4, 4, 20);
+        ctx.fillRect(34, 4, 4, 20);
+        break;
+      case 'summoner':
+        hairColor = '#aaf'; eyeColor = '#0cd';
+        ctx.fillStyle = hairColor;
+        ctx.fillRect(10, 4, 28, 10);
+        ctx.fillRect(10, 4, 4, 16);
+        ctx.fillRect(34, 4, 4, 16);
+        break;
       default:
         hairColor = '#5a3a1a'; eyeColor = '#446';
         ctx.fillStyle = hairColor;
@@ -1032,18 +1376,24 @@ const SpriteGen = (() => {
     cache.flower_blue = generateFlower('#4466ff');
     cache.flower_yellow = generateFlower('#ffcc22');
 
-    // Player (4 dirs x 4 frames x 3 classes)
+    // Player (4 dirs x 4 frames x 10 classes)
     cache.player = {};
-    for (const cls of ['warrior', 'mage', 'ranger']) {
+    for (const cls of ['warrior', 'mage', 'ranger', 'paladin', 'rogue', 'necromancer', 'druid', 'monk', 'bard', 'summoner']) {
       cache.player[cls] = {};
       for (const dir of ['down', 'up', 'left', 'right']) {
         cache.player[cls][dir] = [0, 1, 2, 3].map(f => generatePlayer(dir, f, cls));
       }
     }
 
-    // Enemies
-    const enemyTypes = ['slime', 'skeleton', 'bat', 'wolf', 'goblin', 'ghost',
-      'golem', 'dragon', 'dark_knight', 'scorpion', 'ice_elemental'];
+    // Enemies (expanded)
+    const enemyTypes = [
+      'slime', 'skeleton', 'bat', 'wolf', 'goblin', 'ghost',
+      'golem', 'dragon', 'dark_knight', 'scorpion', 'ice_elemental',
+      'spider', 'mushroom', 'fire_imp', 'sand_wurm', 'wraith', 'treant',
+      'harpy', 'mimic', 'gargoyle', 'necromancer_enemy', 'frost_wolf',
+      'lava_golem', 'shadow_assassin', 'crystal_golem', 'demon', 'lich',
+      'yeti', 'blood_knight', 'elemental_lord', 'void_horror', 'phoenix_enemy'
+    ];
     cache.enemies = {};
     for (const t of enemyTypes) {
       cache.enemies[t] = generateEnemy(t);
@@ -1063,9 +1413,9 @@ const SpriteGen = (() => {
       cache.icons[t] = generateIcon(t);
     }
 
-    // Portraits
+    // Portraits (all classes)
     cache.portraits = {};
-    for (const t of ['warrior', 'mage', 'ranger']) {
+    for (const t of ['warrior', 'mage', 'ranger', 'paladin', 'rogue', 'necromancer', 'druid', 'monk', 'bard', 'summoner']) {
       cache.portraits[t] = generatePortrait(t);
     }
   }

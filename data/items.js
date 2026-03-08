@@ -107,7 +107,13 @@ const Items = (() => {
     { name: 'Greater Mana Potion', type: 'consumable', effect: 'heal_mp', value: 80, rarity: 'uncommon', desc: 'Restores 80 MP.', cost: 60 },
     { name: 'Supreme Mana Potion', type: 'consumable', effect: 'heal_mp', value: 200, rarity: 'rare', desc: 'Restores 200 MP.', cost: 150 },
     { name: 'Antidote', type: 'consumable', effect: 'cure_poison', value: 0, rarity: 'common', desc: 'Cures poison.', cost: 15 },
-    { name: 'Elixir', type: 'consumable', effect: 'heal_hp', value: 9999, rarity: 'epic', desc: 'Fully restores HP.', cost: 500 }
+    { name: 'Elixir', type: 'consumable', effect: 'heal_hp', value: 9999, rarity: 'epic', desc: 'Fully restores HP.', cost: 500 },
+    { name: 'Full Elixir', type: 'consumable', effect: 'heal_both', value: 9999, rarity: 'legendary', desc: 'Fully restores HP and MP.', cost: 1000 },
+    { name: 'Revive Potion', type: 'consumable', effect: 'revive', value: 50, rarity: 'rare', desc: 'Revive a fallen ally at 50% HP.', cost: 250 },
+    { name: 'Strength Tonic', type: 'consumable', effect: 'buff_str', value: 10, rarity: 'uncommon', desc: '+10 STR for the battle.', cost: 80 },
+    { name: 'Defense Tonic', type: 'consumable', effect: 'buff_def', value: 10, rarity: 'uncommon', desc: '+10 DEF for the battle.', cost: 80 },
+    { name: 'Speed Tonic', type: 'consumable', effect: 'buff_agi', value: 10, rarity: 'uncommon', desc: '+10 AGI for the battle.', cost: 80 },
+    { name: 'Fishing Rod', type: 'consumable', effect: 'none', value: 0, rarity: 'uncommon', desc: 'Used for fishing at water spots.', cost: 50 }
   ];
 
   // Crafting materials
@@ -121,7 +127,16 @@ const Items = (() => {
     { name: 'Shadow Essence', type: 'material', rarity: 'epic', desc: 'Dark energy essence.' },
     { name: 'Frost Shard', type: 'material', rarity: 'uncommon', desc: 'Frozen ice shard.' },
     { name: 'Ancient Bone', type: 'material', rarity: 'uncommon', desc: 'Bone from ancient creatures.' },
-    { name: 'Herb Bundle', type: 'material', rarity: 'common', desc: 'Medicinal herbs.' }
+    { name: 'Herb Bundle', type: 'material', rarity: 'common', desc: 'Medicinal herbs.' },
+    { name: 'Spider Silk', type: 'material', rarity: 'common', desc: 'Strong silk from spiders.' },
+    { name: 'Wind Feather', type: 'material', rarity: 'uncommon', desc: 'Feather infused with wind.' },
+    { name: 'Fire Essence', type: 'material', rarity: 'uncommon', desc: 'Condensed fire energy.' },
+    { name: 'Ice Shard', type: 'material', rarity: 'uncommon', desc: 'A shard of eternal ice.' },
+    { name: 'Shadow Cloth', type: 'material', rarity: 'rare', desc: 'Cloth woven from shadows.' },
+    { name: 'Crystal Dust', type: 'material', rarity: 'rare', desc: 'Powdered magical crystal.' },
+    { name: 'Blood Ruby', type: 'material', rarity: 'epic', desc: 'A ruby pulsing with dark power.' },
+    { name: 'Void Crystal', type: 'material', rarity: 'epic', desc: 'Crystal from the void between worlds.' },
+    { name: 'Lightning Core', type: 'material', rarity: 'epic', desc: 'Core of a lightning elemental.' }
   ];
 
   function generateItem(level, forceRarity) {
@@ -246,13 +261,24 @@ const Items = (() => {
     return totals;
   }
 
+  function addToInventory(item) {
+    if (!GS.player || !GS.player.items) return false;
+    if (GS.player.items.length >= (GS.player.maxSlots || 20)) {
+      Core.addNotification('Inventory full!', 2);
+      return false;
+    }
+    if (!item.id) item.id = Utils.genId();
+    GS.player.items.push(item);
+    return true;
+  }
+
   function getRarityColor(rarity) {
     return rarities[rarity]?.nameColor || '#aaa';
   }
 
   return {
     generateItem, generateConsumable, generateMaterial,
-    getEquipmentBonus, getRarityColor,
+    getEquipmentBonus, getRarityColor, addToInventory,
     consumables, materials, rarities, slotTypes
   };
 })();

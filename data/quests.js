@@ -99,8 +99,193 @@ const Quests = (() => {
         { type: 'reach_level', level: 10, desc: 'Reach Level 10', done: false }
       ],
       rewards: { xp: 0, gold: 500 }
+    },
+
+    // Expanded side quests
+    spider_nest: {
+      id: 'spider_nest', name: 'Clear the Spider Nest', type: 'side',
+      desc: 'Giant spiders have infested the Whisperwood. Exterminate them.',
+      objectives: [
+        { type: 'kill', target: 'spider', count: 8, current: 0, desc: 'Kill 8 Giant Spiders' }
+      ],
+      rewards: { xp: 250, gold: 100 }
+    },
+    ghost_hunt: {
+      id: 'ghost_hunt', name: 'Ghost Hunting', type: 'side',
+      desc: 'Phantoms have been spotted in the caves. Put them to rest.',
+      objectives: [
+        { type: 'kill', target: 'ghost', count: 5, current: 0, desc: 'Banish 5 Phantoms' }
+      ],
+      rewards: { xp: 350, gold: 150 }
+    },
+    demon_slayer: {
+      id: 'demon_slayer', name: 'Demon Slayer', type: 'side',
+      desc: 'Lesser demons are emerging from the Abyss. Destroy them.',
+      objectives: [
+        { type: 'kill', target: 'demon', count: 5, current: 0, desc: 'Slay 5 Lesser Demons' }
+      ],
+      rewards: { xp: 600, gold: 300 }
+    },
+    undead_purge: {
+      id: 'undead_purge', name: 'Undead Purge', type: 'side',
+      desc: 'The undead are rising. Purge skeletons and wraiths.',
+      objectives: [
+        { type: 'kill', target: 'skeleton', count: 5, current: 0, desc: 'Kill 5 Skeletons' },
+        { type: 'kill', target: 'wraith', count: 3, current: 0, desc: 'Banish 3 Wraiths' }
+      ],
+      rewards: { xp: 450, gold: 200 }
+    },
+    crystal_collector: {
+      id: 'crystal_collector', name: 'Crystal Collector', type: 'side',
+      desc: 'Collect crystal dust from crystal golems in the sanctum.',
+      objectives: [
+        { type: 'kill', target: 'crystal_golem', count: 4, current: 0, desc: 'Kill 4 Crystal Golems' }
+      ],
+      rewards: { xp: 500, gold: 250 }
+    },
+    explorer_all: {
+      id: 'explorer_all', name: 'World Explorer', type: 'side',
+      desc: 'Visit every zone in the realm.',
+      objectives: [
+        { type: 'visit_zone', target: 'eldergrove', desc: 'Visit Eldergrove', done: false },
+        { type: 'visit_zone', target: 'whisperwood', desc: 'Visit Whisperwood', done: false },
+        { type: 'visit_zone', target: 'shadowmere', desc: 'Visit Shadowmere', done: false },
+        { type: 'visit_zone', target: 'sunscorch', desc: 'Visit Sunscorch', done: false },
+        { type: 'visit_zone', target: 'frostpeak', desc: 'Visit Frostpeak', done: false },
+        { type: 'visit_zone', target: 'abyss', desc: 'Visit The Abyss', done: false },
+        { type: 'visit_zone', target: 'crystal_sanctum', desc: 'Visit Crystal Sanctum', done: false }
+      ],
+      rewards: { xp: 1000, gold: 500 }
+    },
+    fishing_quest: {
+      id: 'fishing_quest', name: 'Gone Fishing', type: 'side',
+      desc: 'Try your hand at fishing. Catch some fish!',
+      objectives: [
+        { type: 'fish', count: 5, current: 0, desc: 'Catch 5 fish' }
+      ],
+      rewards: { xp: 200, gold: 100 }
+    },
+    crafting_mastery: {
+      id: 'crafting_mastery', name: 'Artisan Apprentice', type: 'side',
+      desc: 'Learn the art of crafting by making several items.',
+      objectives: [
+        { type: 'craft', count: 5, current: 0, desc: 'Craft 5 items' }
+      ],
+      rewards: { xp: 300, gold: 150 }
+    },
+    pet_hunt: {
+      id: 'pet_hunt', name: 'Pet Collector', type: 'side',
+      desc: 'Find and collect pet companions from defeated enemies.',
+      objectives: [
+        { type: 'collect_pet', count: 3, current: 0, desc: 'Collect 3 pets' }
+      ],
+      rewards: { xp: 400, gold: 200 }
+    },
+    level_20: {
+      id: 'level_20', name: 'True Power', type: 'milestone',
+      desc: 'Reach level 20 to prove your mastery.',
+      objectives: [
+        { type: 'reach_level', level: 20, desc: 'Reach Level 20', done: false }
+      ],
+      rewards: { xp: 0, gold: 1000 }
+    },
+    level_30: {
+      id: 'level_30', name: 'Legendary Hero', type: 'milestone',
+      desc: 'Reach the pinnacle of power at level 30.',
+      objectives: [
+        { type: 'reach_level', level: 30, desc: 'Reach Level 30', done: false }
+      ],
+      rewards: { xp: 0, gold: 5000 }
+    },
+    mass_slayer: {
+      id: 'mass_slayer', name: 'Mass Slayer', type: 'side',
+      desc: 'Prove your might by defeating 50 enemies total.',
+      objectives: [
+        { type: 'kill_any', count: 50, current: 0, desc: 'Defeat 50 enemies' }
+      ],
+      rewards: { xp: 800, gold: 400 }
+    },
+    golem_crusher: {
+      id: 'golem_crusher', name: 'Golem Crusher', type: 'side',
+      desc: 'Stone golems guard ancient treasures. Smash them.',
+      objectives: [
+        { type: 'kill', target: 'golem', count: 5, current: 0, desc: 'Kill 5 Stone Golems' }
+      ],
+      rewards: { xp: 500, gold: 250 }
+    },
+    dark_knight_hunter: {
+      id: 'dark_knight_hunter', name: 'Dark Knight Hunter', type: 'side',
+      desc: 'The Dark Knights threaten the realm. Hunt them down.',
+      objectives: [
+        { type: 'kill', target: 'dark_knight', count: 3, current: 0, desc: 'Defeat 3 Dark Knights' }
+      ],
+      rewards: { xp: 500, gold: 300 }
     }
   };
+
+  // Procedural quest generation
+  const proceduralTemplates = [
+    {
+      nameTemplate: 'Hunt: {enemy}',
+      descTemplate: 'Eliminate {count} {enemy} threatening the area.',
+      type: 'procedural',
+      objTemplate: { type: 'kill', target: '{enemyId}', count: '{count}', current: 0 },
+      enemies: ['slime', 'wolf', 'goblin', 'spider', 'bat', 'scorpion', 'skeleton', 'ghost', 'frost_wolf'],
+      countRange: [3, 8],
+      rewardScale: { xp: 30, gold: 15 }
+    },
+    {
+      nameTemplate: 'Material Run: {material}',
+      descTemplate: 'Collect {count} crafting materials for the smithy.',
+      type: 'procedural',
+      objTemplate: { type: 'collect_materials', count: '{count}', current: 0 },
+      countRange: [5, 15],
+      rewardScale: { xp: 20, gold: 20 }
+    },
+    {
+      nameTemplate: 'Slayer Challenge',
+      descTemplate: 'Defeat {count} enemies of any kind.',
+      type: 'procedural',
+      objTemplate: { type: 'kill_any', count: '{count}', current: 0 },
+      countRange: [10, 30],
+      rewardScale: { xp: 15, gold: 10 }
+    }
+  ];
+
+  function generateProceduralQuest(playerLevel) {
+    const template = proceduralTemplates[Math.floor(Math.random() * proceduralTemplates.length)];
+    const count = template.countRange[0] + Math.floor(Math.random() * (template.countRange[1] - template.countRange[0]));
+
+    let name = template.nameTemplate.replace('{count}', count);
+    let desc = template.descTemplate.replace('{count}', count);
+    const obj = { ...template.objTemplate };
+    obj.count = count;
+    obj.current = 0;
+
+    if (template.enemies) {
+      const enemyId = template.enemies[Math.floor(Math.random() * template.enemies.length)];
+      const enemyDef = typeof Enemies !== 'undefined' ? Enemies.get(enemyId) : null;
+      const enemyName = enemyDef ? enemyDef.name : enemyId;
+      name = name.replace('{enemy}', enemyName);
+      desc = desc.replace('{enemy}', enemyName);
+      obj.target = enemyId;
+      obj.desc = `Kill ${count} ${enemyName}s`;
+    } else {
+      obj.desc = desc;
+    }
+
+    return {
+      id: 'proc_' + Utils.genId(),
+      name,
+      desc,
+      type: 'procedural',
+      objectives: [obj],
+      rewards: {
+        xp: Math.floor(template.rewardScale.xp * count * (1 + playerLevel * 0.1)),
+        gold: Math.floor(template.rewardScale.gold * count * (1 + playerLevel * 0.1))
+      }
+    };
+  }
 
   function acceptQuest(questId) {
     const def = questDefs[questId];
@@ -252,9 +437,52 @@ const Quests = (() => {
     return questDefs;
   }
 
+  function onFishCaught() {
+    for (const quest of GS.quests) {
+      if (quest.state !== 'active') continue;
+      for (const obj of quest.objectives) {
+        if (obj.done) continue;
+        if (obj.type === 'fish') {
+          obj.current = (obj.current || 0) + 1;
+          if (obj.current >= obj.count) obj.done = true;
+        }
+      }
+      checkQuestComplete(quest);
+    }
+  }
+
+  function onItemCrafted() {
+    for (const quest of GS.quests) {
+      if (quest.state !== 'active') continue;
+      for (const obj of quest.objectives) {
+        if (obj.done) continue;
+        if (obj.type === 'craft') {
+          obj.current = (obj.current || 0) + 1;
+          if (obj.current >= obj.count) obj.done = true;
+        }
+      }
+      checkQuestComplete(quest);
+    }
+  }
+
+  function onPetCollected() {
+    for (const quest of GS.quests) {
+      if (quest.state !== 'active') continue;
+      for (const obj of quest.objectives) {
+        if (obj.done) continue;
+        if (obj.type === 'collect_pet') {
+          obj.current = (obj.current || 0) + 1;
+          if (obj.current >= obj.count) obj.done = true;
+        }
+      }
+      checkQuestComplete(quest);
+    }
+  }
+
   return {
     acceptQuest, onEnemyKilled, onZoneEntered, onChestOpened,
-    onMaterialCollected, checkLevelQuests,
+    onMaterialCollected, onFishCaught, onItemCrafted, onPetCollected,
+    checkLevelQuests, generateProceduralQuest,
     getActiveQuests, getCompletedQuests, getAllQuestDefs
   };
 })();

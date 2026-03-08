@@ -53,6 +53,14 @@
   <script src="data/crafting.js"></script>
   <script src="data/npcs.js"></script>
   <script src="data/quests.js"></script>
+  <script src="data/allies.js"></script>
+  <script src="data/pets.js"></script>
+  <script src="data/achievements.js"></script>
+  <script src="data/bestiary.js"></script>
+  <script src="data/enchanting.js"></script>
+  <script src="data/fishing.js"></script>
+  <script src="data/daily.js"></script>
+  <script src="data/newgame-plus.js"></script>
 
   <!-- Combat -->
   <script src="combat/abilities.js"></script>
@@ -102,6 +110,12 @@
           Particles.init();
           Minimap.init();
 
+          setProgress(75, 'Initializing game systems...');
+          Achievements.init();
+          Bestiary.init();
+          DailyChallenges.init();
+          NewGamePlus.init();
+
           setProgress(80, 'Registering systems...');
           Systems.registerAll();
 
@@ -136,6 +150,7 @@
             QuestLog.update(dt);
             Menus.update(dt);
             Particles.update(dt);
+            Fishing.update(dt);
 
             // Ambient particles based on zone
             if (GS.state === GameStates.PLAY) {

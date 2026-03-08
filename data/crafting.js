@@ -61,6 +61,90 @@ const Crafting = (() => {
       materials: [{ name: 'Monster Fang', count: 3 }, { name: 'Frost Shard', count: 2 }],
       result: { type: 'equipment', slot: 'boots', name: 'Windwalker Boots', rarity: 'rare', level: 6,
         stats: { agi: 8, def: 3 }, desc: 'Boots enchanted with wind magic.' }
+    },
+    {
+      name: 'Mana Potion',
+      materials: [{ name: 'Herb Bundle', count: 1 }, { name: 'Magic Crystal', count: 1 }],
+      result: { type: 'consumable', name: 'Mana Potion', effect: 'heal_mp', value: 30, rarity: 'common',
+        desc: 'Restores 30 MP.' }
+    },
+    {
+      name: 'Fire Blade',
+      materials: [{ name: 'Iron Ore', count: 3 }, { name: 'Fire Essence', count: 3 }],
+      result: { type: 'equipment', slot: 'weapon', name: 'Fire Blade', rarity: 'rare', level: 6,
+        stats: { str: 12, int: 4 }, desc: 'A blade wreathed in flame.' }
+    },
+    {
+      name: 'Ice Shield Helm',
+      materials: [{ name: 'Ice Shard', count: 4 }, { name: 'Iron Ore', count: 2 }],
+      result: { type: 'equipment', slot: 'helmet', name: 'Frostguard Helm', rarity: 'rare', level: 7,
+        stats: { def: 8, int: 5, mp: 10 }, desc: 'A helm crackling with ice.' }
+    },
+    {
+      name: 'Shadow Cloak',
+      materials: [{ name: 'Shadow Cloth', count: 4 }, { name: 'Shadow Essence', count: 2 }],
+      result: { type: 'equipment', slot: 'armor', name: 'Shadow Cloak', rarity: 'epic', level: 9,
+        stats: { agi: 12, luk: 8, def: 5 }, desc: 'A cloak woven from pure shadow.' }
+    },
+    {
+      name: 'Crystal Crown',
+      materials: [{ name: 'Crystal Dust', count: 5 }, { name: 'Magic Crystal', count: 3 }],
+      result: { type: 'equipment', slot: 'helmet', name: 'Crystal Crown', rarity: 'epic', level: 10,
+        stats: { int: 15, mp: 30, luk: 5 }, desc: 'A crown of pure crystal.' }
+    },
+    {
+      name: 'Spider Silk Armor',
+      materials: [{ name: 'Spider Silk', count: 6 }, { name: 'Iron Ore', count: 2 }],
+      result: { type: 'equipment', slot: 'armor', name: 'Silken Mail', rarity: 'uncommon', level: 4,
+        stats: { def: 6, agi: 4 }, desc: 'Lightweight silk armor.' }
+    },
+    {
+      name: 'Blood Ring',
+      materials: [{ name: 'Blood Ruby', count: 2 }, { name: 'Gold Ore', count: 1 }],
+      result: { type: 'equipment', slot: 'ring', name: 'Blood Ring', rarity: 'epic', level: 10,
+        stats: { str: 10, hp: 30 }, desc: 'A ring pulsing with blood magic.' }
+    },
+    {
+      name: 'Void Amulet',
+      materials: [{ name: 'Void Crystal', count: 3 }, { name: 'Shadow Essence', count: 3 }],
+      result: { type: 'equipment', slot: 'amulet', name: 'Void Pendant', rarity: 'legendary', level: 14,
+        stats: { int: 18, str: 10, mp: 40, hp: 30 }, desc: 'An amulet from the void itself.' }
+    },
+    {
+      name: 'Thunder Hammer',
+      materials: [{ name: 'Lightning Core', count: 3 }, { name: 'Iron Ore', count: 4 }, { name: 'Gold Ore', count: 2 }],
+      result: { type: 'equipment', slot: 'weapon', name: 'Thunder Hammer', rarity: 'legendary', level: 14,
+        stats: { str: 22, int: 10 }, desc: 'A hammer crackling with lightning.' }
+    },
+    {
+      name: 'Feather Boots',
+      materials: [{ name: 'Wind Feather', count: 4 }, { name: 'Spider Silk', count: 2 }],
+      result: { type: 'equipment', slot: 'boots', name: 'Featherlight Boots', rarity: 'rare', level: 7,
+        stats: { agi: 12, luk: 4 }, desc: 'Incredibly light wind-blessed boots.' }
+    },
+    {
+      name: 'Revive Potion',
+      materials: [{ name: 'Herb Bundle', count: 5 }, { name: 'Magic Crystal', count: 2 }, { name: 'Crystal Dust', count: 1 }],
+      result: { type: 'consumable', name: 'Revive Potion', effect: 'revive', value: 50, rarity: 'rare',
+        desc: 'Revive a fallen ally at 50% HP.' }
+    },
+    {
+      name: 'Strength Tonic',
+      materials: [{ name: 'Monster Fang', count: 3 }, { name: 'Herb Bundle', count: 2 }],
+      result: { type: 'consumable', name: 'Strength Tonic', effect: 'buff_str', value: 10, rarity: 'uncommon',
+        desc: '+10 STR for the battle.' }
+    },
+    {
+      name: 'Elixir',
+      materials: [{ name: 'Herb Bundle', count: 6 }, { name: 'Magic Crystal', count: 3 }, { name: 'Crystal Dust', count: 2 }],
+      result: { type: 'consumable', name: 'Elixir', effect: 'heal_hp', value: 9999, rarity: 'epic',
+        desc: 'Fully restores HP.' }
+    },
+    {
+      name: 'Fishing Rod',
+      materials: [{ name: 'Iron Ore', count: 1 }, { name: 'Spider Silk', count: 2 }],
+      result: { type: 'consumable', name: 'Fishing Rod', id: 'fishing_rod', effect: 'none', value: 0, rarity: 'uncommon',
+        desc: 'Used for fishing at water spots.' }
     }
   ];
 
