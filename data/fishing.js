@@ -268,5 +268,45 @@ const Fishing = (() => {
     _state.combo = 0;
   }
 
-  return { fishDefs, canFish, startFishing, update, onReel, getState, getStats, cancel };
+  function render() {
+    if (!_state.active) return;
+    const w = typeof Renderer !== 'undefined' ? Renderer.getWidth() : 800;
+    const h = typeof Renderer !== 'undefined' ? Renderer.getHeight() : 600;
+
+    // Fishing overlay panel
+    const panelW = 300, panelH = 120;
+    const px = (w - panelW) / 2, py = h * 0.15;
+    if (typeof Renderer !== 'undefined') {
+      Renderer.drawPanel(px, py, panelW, panelH, 'rgba(0,0,30,0.9)', '#48f');
+
+      const phases = {
+        casting: { text: 'Casting...', color: '#8cf' },
+        waiting: { text: 'Waiting for a bite...', color: '#aaa' },
+        bite: { text: 'A BITE! Press SPACE!', color: '#ff0' },
+        caught: { text: 'Caught!', color: '#4f4' },
+        failed: { text: 'Got away...', color: '#f44' }
+      };
+      const info = phases[_state.phase] || { text: '', color: '#fff' };
+      Renderer.drawText('FISHING', px + panelW / 2, py + 12, '#48f', 16, 'center', true);
+      Renderer.drawText(info.text, px + panelW / 2, py + 40, info.color, 14, 'center', true);
+
+      // Reel progress bar during bite
+      if (_state.phase === 'bite') {
+        const barW = panelW - 40, barH = 14;
+        const barX = px + 20, barY = py + 65;
+        const pct = Math.min(1, _state.reelProgress / Math.max(1, _state.targetReel));
+        Renderer.drawBar(barX, barY, barW, barH, pct, '#48f', '#224');
+        Renderer.drawText(`${Math.floor(pct * 100)}%`, px + panelW / 2, barY + 1, '#fff', 10, 'center');
+      }
+
+      // Combo display
+      if (_state.combo > 0) {
+        Renderer.drawText(`Combo: ${_state.combo}x`, px + panelW / 2, py + panelH - 16, '#f0c040', 11, 'center');
+      }
+
+      Renderer.drawText('ESC to cancel', px + panelW / 2, py + panelH - 4, '#555', 9, 'center');
+    }
+  }
+
+  return { fishDefs, canFish, startFishing, update, onReel, render, getState, getStats, cancel };
 })();

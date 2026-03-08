@@ -214,8 +214,12 @@ const SaveSystem = (() => {
     // Cheat mode
     GS.cheatActive = data.cheatActive || false;
 
-    // Re-init achievements counters
+    // Re-init game subsystems
     if (typeof Achievements !== 'undefined') Achievements.init();
+    if (typeof Bestiary !== 'undefined') Bestiary.init();
+    if (typeof DailyChallenges !== 'undefined') DailyChallenges.init();
+    if (typeof NewGamePlus !== 'undefined') NewGamePlus.init();
+    if (typeof Systems !== 'undefined' && Systems.resetPartyTrail) Systems.resetPartyTrail();
 
     GS.entities.push(GS.player);
 

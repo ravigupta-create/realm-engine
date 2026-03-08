@@ -17,7 +17,7 @@ const Dialogue = (() => {
   let _shopItems = [];
 
   function startDialogue(entity) {
-    const npcData = NPCs.get(entity.name);
+    const npcData = typeof NPCs !== 'undefined' ? NPCs.get(entity.name) : null;
     if (!npcData) {
       // Generic dialogue
       _tree = {
@@ -166,7 +166,7 @@ const Dialogue = (() => {
     _shopMode = mode;
     _shopSelected = 0;
     if (mode === 'buy') {
-      const npcData = NPCs.get(_npcEntity.name);
+      const npcData = typeof NPCs !== 'undefined' ? NPCs.get(_npcEntity.name) : null;
       _shopItems = npcData?.shopItems || [];
     } else {
       _shopItems = GS.player.items.filter(i => i.type !== 'material' || i.sellValue);
@@ -176,13 +176,13 @@ const Dialogue = (() => {
   function openCrafting() {
     _shopMode = 'crafting';
     _shopSelected = 0;
-    _shopItems = Crafting.getAvailableRecipes(GS.player);
+    _shopItems = typeof Crafting !== 'undefined' ? Crafting.getAvailableRecipes(GS.player) : [];
   }
 
   function openSkillTrainer() {
     _shopMode = 'skills';
     _shopSelected = 0;
-    _shopItems = Classes.getAvailableSkillUpgrades(GS.player);
+    _shopItems = typeof Classes !== 'undefined' ? Classes.getAvailableSkillUpgrades(GS.player) : [];
   }
 
   function openEnchanting() {
@@ -243,6 +243,7 @@ const Dialogue = (() => {
           if (typeof DailyChallenges !== 'undefined') DailyChallenges.onGoldSpent(cost);
         } else {
           Core.addNotification('Not enough gold!', 2);
+          if (typeof AudioManager !== 'undefined') AudioManager.playSFX('hit');
         }
       } else if (_shopMode === 'sell') {
         const item = _shopItems[_shopSelected];
@@ -257,34 +258,40 @@ const Dialogue = (() => {
         if (typeof AudioManager !== 'undefined') AudioManager.playSFX('coin');
       } else if (_shopMode === 'crafting') {
         const recipe = _shopItems[_shopSelected];
-        if (recipe.canCraft) {
+        if (recipe.canCraft && typeof Crafting !== 'undefined') {
           const result = Crafting.craft(recipe, GS.player);
           if (result) {
             Core.addNotification(`Crafted ${result.name}!`, 3);
             if (typeof AudioManager !== 'undefined') AudioManager.playSFX('levelup');
+            if (typeof Particles !== 'undefined') Particles.emit('buff', Renderer.getWidth() / 2, Renderer.getHeight() / 2, 12);
+            if (typeof Quests !== 'undefined') Quests.onItemCrafted();
             _shopItems = Crafting.getAvailableRecipes(GS.player);
           }
         } else {
           Core.addNotification('Missing materials!', 2);
+          if (typeof AudioManager !== 'undefined') AudioManager.playSFX('hit');
         }
       } else if (_shopMode === 'skills') {
         const skill = _shopItems[_shopSelected];
         if (GS.player.skillPoints > 0) {
-          if (Classes.learnSkill(GS.player, skill.id)) {
+          if (typeof Classes !== 'undefined' && Classes.learnSkill(GS.player, skill.id)) {
             Core.addNotification(`Learned ${skill.name}!`, 3);
             if (typeof AudioManager !== 'undefined') AudioManager.playSFX('levelup');
+            if (typeof Particles !== 'undefined') Particles.emit('levelup', Renderer.getWidth() / 2, Renderer.getHeight() / 2, 12);
             _shopItems = Classes.getAvailableSkillUpgrades(GS.player);
             if (_shopSelected >= _shopItems.length) _shopSelected = Math.max(0, _shopItems.length - 1);
           }
         } else {
           Core.addNotification('No skill points!', 2);
+          if (typeof AudioManager !== 'undefined') AudioManager.playSFX('hit');
         }
       } else if (_shopMode === 'enchanting') {
         const enchant = _shopItems[_shopSelected];
         if (enchant && enchant.canApply && enchant.targetItem) {
-          const result = Enchanting.enchantItem(enchant.targetItem, enchant.id);
+          const result = typeof Enchanting !== 'undefined' ? Enchanting.enchantItem(enchant.targetItem, enchant.id) : { ok: false };
           if (result.ok) {
             if (typeof Particles !== 'undefined') Particles.emit('buff', Renderer.getWidth() / 2, Renderer.getHeight() / 2, 15);
+            if (typeof AudioManager !== 'undefined') AudioManager.playSFX('levelup');
             openEnchanting(); // Refresh list
             if (_shopSelected >= _shopItems.length) _shopSelected = Math.max(0, _shopItems.length - 1);
           }

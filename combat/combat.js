@@ -83,6 +83,17 @@ const Combat = (() => {
         const data = typeof Enemies !== 'undefined' ? Enemies.get(enemy.enemyType) : null;
         enemy.abilities = data ? data.abilities || [] : [];
       }
+      // Apply night combat bonuses to enemy stats
+      if (typeof DayNight !== 'undefined') {
+        const nightMods = DayNight.getCombatModifiers();
+        if (nightMods.enemyStrBonus > 0) {
+          enemy.stats.str = Math.floor(enemy.stats.str * (1 + nightMods.enemyStrBonus));
+          enemy.stats.int = Math.floor(enemy.stats.int * (1 + nightMods.enemyStrBonus));
+        }
+        if (nightMods.enemyAgiBonus > 0) {
+          enemy.stats.agi = Math.floor(enemy.stats.agi * (1 + nightMods.enemyAgiBonus));
+        }
+      }
       // Apply NG+ / difficulty multiplier to enemy stats
       if (typeof NewGamePlus !== 'undefined') {
         const mult = NewGamePlus.getEnemyMultiplier();
@@ -433,7 +444,7 @@ const Combat = (() => {
       const isPhysical = skill.damageType === 'physical';
       const element = skill.element || null;
       const elementColors = { fire: '#f80', ice: '#8cf', lightning: '#ff0', dark: '#a0f', light: '#ffa', earth: '#a86', arcane: '#c6f', poison: '#0a0' };
-      const dmgColor = elementColors[element] || (crit => crit ? '#ff0' : '#fff');
+      const dmgColor = elementColors[element] || '#fff';
 
       if (skill.targetType === 'all_enemies' || skill.aoe) {
         const live = getLiveEnemies();
@@ -445,7 +456,7 @@ const Combat = (() => {
           aoeTotalDmg += dmg;
           addLog(`${skill.name} → ${enemy.name}: ${dmg}${crit ? ' CRIT!' : ''}`);
           const esx = getEnemyScreenX(ei);
-          const c = typeof dmgColor === 'function' ? dmgColor(crit) : dmgColor;
+          const c = crit ? '#ff0' : dmgColor;
           addFloatingNumber(esx + (Math.random() - 0.5) * 30, Renderer.getHeight() * 0.3, crit ? `${dmg}!` : dmg, c, crit ? 22 : 16);
           if (skill.statusEffect && Math.random() < (skill.statusChance || 0.3)) {
             addStatusEffect(enemy, skill.statusEffect, skill.statusDuration || 3, skill.statusDamage || 0);
@@ -464,11 +475,11 @@ const Combat = (() => {
           applyDamage(target.stats, dmg);
           totalDmg += dmg;
           const esx = getEnemyScreenX(getLiveEnemies().indexOf(target));
-          const c = typeof dmgColor === 'function' ? dmgColor(crit) : dmgColor;
+          const c = crit ? '#ff0' : dmgColor;
           addFloatingNumber(esx + (hit * 15), Renderer.getHeight() * 0.3 - (hit * 15), crit ? `${dmg}!` : dmg, c, crit ? 24 : 18);
           if (hitCount > 1) addLog(`${skill.name} hit ${hit + 1} → ${target.name}: ${dmg}${crit ? ' CRIT!' : ''}`);
         }
-        if (hitCount === 1) addLog(`${skill.name} → ${target.name}: ${totalDmg}${''}`);
+        if (hitCount === 1) addLog(`${skill.name} → ${target.name}: ${totalDmg}`);
         if (skill.statusEffect && Math.random() < (skill.statusChance || 0.3)) {
           addStatusEffect(target, skill.statusEffect, skill.statusDuration || 3, skill.statusDamage || 0);
           addLog(`${target.name} is ${skill.statusEffect}!`);
@@ -808,8 +819,9 @@ const Combat = (() => {
       if (typeof Items !== 'undefined' && typeof Enemies !== 'undefined') {
         const data = Enemies.get(enemy.enemyType);
         if (data && data.lootTable) {
+          const dropMult = typeof NewGamePlus !== 'undefined' ? NewGamePlus.getDropRateMultiplier() : 1;
           for (const drop of data.lootTable) {
-            if (Math.random() < drop.chance) {
+            if (Math.random() < drop.chance * dropMult) {
               const item = Items.generateItem(enemy.level, drop.rarity);
               if (item) {
                 GS.player.items.push(item);
@@ -1368,7 +1380,7 @@ const Combat = (() => {
     }
 
     // Combat log
-    Renderer.drawPanel(280, h - 180, w - 480, Math.min(170, _combatLog.length * 18 + 10));
+    Renderer.drawPanel(280, h - 180, Math.max(100, w - 480), Math.min(170, _combatLog.length * 18 + 10));
     for (let i = 0; i < _combatLog.length; i++) {
       Renderer.drawText(_combatLog[i], 290, h - 172 + i * 18, '#ddd', 11);
     }
@@ -1386,26 +1398,36 @@ const Combat = (() => {
 
   function renderSkillMenu(w, h) {
     const skills = GS.player.skills || [];
-    const panelH = Math.min(220, skills.length * 26 + 30);
+    const maxShow = 8;
+    const panelH = Math.min(220, Math.min(skills.length, maxShow) * 26 + 30);
     Renderer.drawPanel(w - 280, h - panelH - 10, 260, panelH);
     Renderer.drawText('Skills (ESC back)', w - 270, h - panelH - 2, '#aaa', 10);
-    for (let i = 0; i < skills.length && i < 8; i++) {
+    const scrollOff = Math.max(0, _selectedSkill - maxShow + 1);
+    for (let i = scrollOff; i < skills.length && i < scrollOff + maxShow; i++) {
       const sel = i === _selectedSkill;
       const skill = skills[i];
       const canUse = GS.player.stats.mp >= skill.mpCost;
       const color = sel ? '#ffcc00' : (canUse ? '#aaa' : '#555');
       const element = skill.element ? ` [${skill.element}]` : '';
-      Renderer.drawText((sel ? '> ' : '  ') + skill.name + ` ${skill.mpCost}MP${element}`, w - 270, h - panelH + 18 + i * 24, color, 12);
+      Renderer.drawText((sel ? '> ' : '  ') + skill.name + ` ${skill.mpCost}MP${element}`, w - 270, h - panelH + 18 + (i - scrollOff) * 24, color, 12);
+    }
+    if (skills.length > maxShow) {
+      Renderer.drawText(`(${_selectedSkill + 1}/${skills.length})`, w - 150, h - panelH - 2, '#666', 9, 'center');
     }
   }
 
   function renderItemMenu(w, h) {
     const items = GS.player.items.filter(i => i.type === 'consumable');
+    const maxShow = 6;
     Renderer.drawPanel(w - 250, h - 180, 230, 170);
     Renderer.drawText('Items (ESC back)', w - 240, h - 175, '#aaa', 10);
-    for (let i = 0; i < items.length && i < 6; i++) {
+    const scrollOff = Math.max(0, _selectedItem - maxShow + 1);
+    for (let i = scrollOff; i < items.length && i < scrollOff + maxShow; i++) {
       const sel = i === _selectedItem;
-      Renderer.drawText((sel ? '> ' : '  ') + items[i].name, w - 240, h - 155 + i * 24, sel ? '#ffcc00' : '#aaa', 12);
+      Renderer.drawText((sel ? '> ' : '  ') + items[i].name, w - 240, h - 155 + (i - scrollOff) * 24, sel ? '#ffcc00' : '#aaa', 12);
+    }
+    if (items.length > maxShow) {
+      Renderer.drawText(`(${_selectedItem + 1}/${items.length})`, w - 135, h - 175, '#666', 9, 'center');
     }
   }
 

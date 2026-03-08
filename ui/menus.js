@@ -14,12 +14,12 @@ const Menus = (() => {
   let _cheatActive = false;
 
   // Sub-screen system for pause menu
-  let _subScreen = null; // null, 'settings', 'achievements', 'bestiary', 'dailies', 'pets'
+  let _subScreen = null; // null, 'settings', 'achievements', 'bestiary', 'dailies', 'pets', 'party', 'save_slots', 'load_slots'
   let _subSelected = 0;
   let _subScroll = 0;
 
   const titleOptions = ['New Game', 'Continue', 'Enter Code', 'Settings'];
-  const pauseOptions = ['Resume', 'Inventory', 'Quest Log', 'Achievements', 'Bestiary', 'Dailies', 'Pets', 'Settings', 'Save Game', 'Quit to Title'];
+  const pauseOptions = ['Resume', 'Inventory', 'Quest Log', 'Achievements', 'Bestiary', 'Dailies', 'Pets', 'Party', 'Settings', 'Save Game', 'Quit to Title'];
 
   const settingsItems = ['Music Volume', 'SFX Volume', 'Difficulty', 'Show FPS', 'Back'];
 
@@ -36,6 +36,18 @@ const Menus = (() => {
   // ======== TITLE SCREEN ========
   function updateTitle(dt) {
     _titleAnim += dt;
+
+    // Handle sub-screens from title (load slots, settings)
+    if (_subScreen === 'load_slots' || _subScreen === 'settings') {
+      if (Input.actionPressed(Input.Actions.CANCEL)) {
+        _subScreen = null;
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
+        return;
+      }
+      if (_subScreen === 'load_slots') updateSaveSlots('load');
+      if (_subScreen === 'settings') updateSettings();
+      return;
+    }
 
     if (_codeMode) {
       for (const code of Object.keys(Input.justPressed)) {
@@ -83,9 +95,12 @@ const Menus = (() => {
           break;
         case 'Continue':
           if (typeof SaveSystem !== 'undefined') {
-            if (SaveSystem.hasSave()) {
-              SaveSystem.load();
-              Core.setState(GameStates.PLAY);
+            // Check if any save exists
+            let anySave = false;
+            for (let s = 0; s < 3; s++) { if (SaveSystem.hasSave(s)) { anySave = true; break; } }
+            if (anySave) {
+              _subScreen = 'load_slots';
+              _subSelected = 0;
             } else {
               Core.addNotification('No save data found!', 2);
             }
@@ -119,9 +134,13 @@ const Menus = (() => {
     const h = Renderer.getHeight();
     const ctx = Renderer.getCtx();
 
-    // If sub-screen active (settings from title)
+    // If sub-screen active (settings or load slots from title)
     if (_subScreen === 'settings') {
       renderSettings(w, h, ctx);
+      return;
+    }
+    if (_subScreen === 'load_slots') {
+      renderSaveSlots(w, h, 'load');
       return;
     }
 
@@ -532,15 +551,17 @@ const Menus = (() => {
           _subScreen = 'pets';
           _subSelected = 0;
           break;
+        case 'Party':
+          _subScreen = 'party';
+          _subSelected = 0;
+          break;
         case 'Settings':
           _subScreen = 'settings';
           _settingsSelected = 0;
           break;
         case 'Save Game':
-          if (typeof SaveSystem !== 'undefined') {
-            SaveSystem.save();
-            Core.addNotification('Game saved!', 2);
-          }
+          _subScreen = 'save_slots';
+          _subSelected = GS.saveSlot || 0;
           break;
         case 'Quit to Title':
           _subScreen = null;
@@ -568,6 +589,9 @@ const Menus = (() => {
       case 'bestiary': updateBestiary(); break;
       case 'dailies': updateDailies(); break;
       case 'pets': updatePets(); break;
+      case 'party': updateParty(); break;
+      case 'save_slots': updateSaveSlots('save'); break;
+      case 'load_slots': updateSaveSlots('load'); break;
     }
   }
 
@@ -585,6 +609,9 @@ const Menus = (() => {
         case 'bestiary': renderBestiary(w, h, ctx); break;
         case 'dailies': renderDailies(w, h, ctx); break;
         case 'pets': renderPets(w, h, ctx); break;
+        case 'party': renderParty(w, h, ctx); break;
+        case 'save_slots': renderSaveSlots(w, h, 'save'); break;
+        case 'load_slots': renderSaveSlots(w, h, 'load'); break;
       }
       return;
     }
@@ -1200,6 +1227,162 @@ const Menus = (() => {
     }
 
     Renderer.drawText('ENTER set active | ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
+  }
+
+  // ======== SAVE SLOT SELECTION ========
+  function updateSaveSlots(mode) {
+    if (Input.actionPressed(Input.Actions.UP)) {
+      _subSelected = (_subSelected - 1 + 3) % 3;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+    if (Input.actionPressed(Input.Actions.DOWN)) {
+      _subSelected = (_subSelected + 1) % 3;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    if (Input.actionPressed(Input.Actions.CONFIRM)) {
+      if (typeof SaveSystem !== 'undefined') {
+        if (mode === 'save') {
+          GS.saveSlot = _subSelected;
+          SaveSystem.save(_subSelected);
+          Core.addNotification(`Saved to Slot ${_subSelected + 1}!`, 2);
+          if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
+          _subScreen = null;
+        } else {
+          if (SaveSystem.hasSave(_subSelected)) {
+            GS.saveSlot = _subSelected;
+            SaveSystem.load(_subSelected);
+            _subScreen = null;
+          } else {
+            Core.addNotification('Empty slot!', 2);
+          }
+        }
+      }
+    }
+  }
+
+  function renderSaveSlots(w, h, mode) {
+    const pw = 320, ph = 220;
+    const px = (w - pw) / 2, py = (h - ph) / 2;
+    Renderer.drawPanel(px, py, pw, ph, 'rgba(8,8,24,0.95)', '#2a2a40');
+    Renderer.drawText(mode === 'save' ? 'SAVE GAME' : 'LOAD GAME', w / 2, py + 18, '#f0c040', 20, 'center', true);
+
+    for (let i = 0; i < 3; i++) {
+      const sel = i === _subSelected;
+      const y = py + 50 + i * 50;
+      const info = typeof SaveSystem !== 'undefined' ? SaveSystem.getSaveInfo(i) : null;
+
+      if (sel) {
+        const ctx = Renderer.getCtx();
+        ctx.fillStyle = 'rgba(240,192,64,0.06)';
+        ctx.fillRect(px + 10, y - 4, pw - 20, 44);
+      }
+
+      const color = sel ? '#f0c040' : '#aaa';
+      if (info) {
+        Renderer.drawText(`Slot ${i + 1}: ${info.name} Lv.${info.level}`, px + 20, y, color, 14);
+        const time = info.playTime ? `${Math.floor(info.playTime / 60)}m` : '';
+        Renderer.drawText(`${info.classType} | ${info.zone} | ${time}`, px + 20, y + 18, '#666', 10);
+      } else {
+        Renderer.drawText(`Slot ${i + 1}: Empty`, px + 20, y, sel ? '#888' : '#555', 14);
+      }
+    }
+
+    Renderer.drawText('ENTER to select | ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
+  }
+
+  // ======== PARTY MANAGEMENT ========
+  function updateParty() {
+    const party = GS.player?.party || [];
+    if (party.length === 0) return;
+
+    if (Input.actionPressed(Input.Actions.UP)) {
+      _subSelected = (_subSelected - 1 + party.length) % party.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+    if (Input.actionPressed(Input.Actions.DOWN)) {
+      _subSelected = (_subSelected + 1) % party.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    const wheel = Input.getWheelDelta();
+    if (wheel !== 0) {
+      _subSelected = (_subSelected + Math.sign(wheel) + party.length) % party.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    // CONFIRM to dismiss ally
+    if (Input.actionPressed(Input.Actions.CONFIRM)) {
+      const ally = party[_subSelected];
+      if (ally && typeof Allies !== 'undefined') {
+        Allies.dismissAlly(ally.id);
+        Core.addNotification(`${ally.name} left the party.`, 3);
+        if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
+        if (_subSelected >= (GS.player.party || []).length) {
+          _subSelected = Math.max(0, (GS.player.party || []).length - 1);
+        }
+      }
+    }
+  }
+
+  function renderParty(w, h, ctx) {
+    const party = GS.player?.party || [];
+
+    const pw = Math.min(w - 60, 480), ph = h - 80;
+    const px = (w - pw) / 2, py = 40;
+    Renderer.drawPanel(px, py, pw, ph, 'rgba(8,8,24,0.95)', '#2a2a40');
+
+    Renderer.drawText('PARTY ALLIES', w / 2, py + 18, '#f0c040', 22, 'center', true);
+    Renderer.drawText(`${party.length}/3 Members`, w / 2, py + 40, '#888', 12, 'center');
+
+    if (party.length === 0) {
+      Renderer.drawText('No allies in party.', w / 2, h / 2 - 10, '#666', 14, 'center');
+      Renderer.drawText('Talk to NPCs to recruit allies!', w / 2, h / 2 + 10, '#444', 12, 'center');
+      Renderer.drawText('ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
+      return;
+    }
+
+    const listY = py + 60;
+    const itemH = 44;
+
+    for (let i = 0; i < party.length; i++) {
+      const ally = party[i];
+      const sel = i === _subSelected;
+      const y = listY + i * itemH;
+
+      if (sel) {
+        ctx.fillStyle = 'rgba(240,192,64,0.06)';
+        ctx.fillRect(px + 10, y - 2, pw - 20, itemH - 4);
+      }
+
+      const roleColors = { tank: '#48f', dps: '#f44', healer: '#4f4', support: '#ff0' };
+      const color = sel ? '#f0c040' : '#ccc';
+      Renderer.drawText(ally.name, px + 20, y + 2, color, 14);
+      Renderer.drawText(`Lv.${ally.level} ${ally.role || ''}`, px + 20, y + 18, roleColors[ally.role] || '#888', 10);
+
+      // HP/MP
+      const hpPct = ally.stats.hp / Math.max(1, ally.stats.maxHp);
+      Renderer.drawBar(px + pw - 180, y + 4, 80, 8, hpPct, '#c00', '#400');
+      Renderer.drawText(`${ally.stats.hp}/${ally.stats.maxHp}`, px + pw - 90, y + 2, '#aaa', 9);
+
+      const mpPct = ally.stats.mp / Math.max(1, ally.stats.maxMp);
+      Renderer.drawBar(px + pw - 180, y + 18, 80, 6, mpPct, '#06a', '#024');
+      Renderer.drawText(`${ally.stats.mp}/${ally.stats.maxMp}`, px + pw - 90, y + 16, '#88a', 9);
+    }
+
+    // Selected ally details
+    if (_subSelected < party.length) {
+      const ally = party[_subSelected];
+      const detY = listY + party.length * itemH + 10;
+      Renderer.drawText('Stats:', px + 20, detY, '#888', 11);
+      Renderer.drawText(`STR:${ally.stats.str} DEF:${ally.stats.def} INT:${ally.stats.int} AGI:${ally.stats.agi} LUK:${ally.stats.luk}`,
+        px + 20, detY + 16, '#aaa', 10);
+      if (ally.abilities) {
+        Renderer.drawText('Skills: ' + ally.abilities.map(a => a.name).join(', '), px + 20, detY + 32, '#88a', 10);
+      }
+    }
+
+    Renderer.drawText('ENTER to dismiss | ESC to go back', w / 2, py + ph - 16, '#4a4a60', 10, 'center');
   }
 
   // ======== GAME OVER ========

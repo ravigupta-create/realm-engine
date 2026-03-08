@@ -236,7 +236,7 @@ const SpriteGen = (() => {
   function generateTree(type) {
     const c = createCanvas(TILE, TILE * 2);
     const ctx = c.getContext('2d');
-    if (type === 'pine') {
+    if (type === 'pine' || type === 'pine_snow') {
       // Trunk
       ctx.fillStyle = '#5a3a1a';
       ctx.fillRect(7, 18, 2, 8);
@@ -1366,6 +1366,7 @@ const SpriteGen = (() => {
     // Objects
     cache.tree = generateTree('oak');
     cache.pine = generateTree('pine');
+    cache.pine_snow = generateTree('pine_snow');
     cache.dead_tree = generateDeadTree();
     cache.rock = generateRock();
     cache.chest_closed = generateChest(false);

@@ -201,6 +201,8 @@ const Systems = (() => {
   const InteractionSystem = {
     update(dt) {
       if (GS.state !== GameStates.PLAY || !GS.player) return;
+      // Don't interact with entities while fishing
+      if (typeof Fishing !== 'undefined' && Fishing.getState().active) return;
 
       if (Input.actionPressed(Input.Actions.INTERACT) || Input.actionPressed(Input.Actions.CONFIRM)) {
         // Find nearest interactable entity
@@ -260,6 +262,10 @@ const Systems = (() => {
 
       if (typeof AudioManager !== 'undefined') {
         AudioManager.playSFX('chest');
+      }
+      if (typeof Particles !== 'undefined') {
+        const s = Renderer.worldToScreen(entity.x, entity.y);
+        Particles.emit('levelup', s.x + Renderer.SCALED_TILE / 2, s.y, 10);
       }
       if (typeof Quests !== 'undefined') Quests.onChestOpened();
     }
@@ -378,9 +384,7 @@ const Systems = (() => {
   // ======== NOTIFICATION SYSTEM ========
   const NotificationSystem = {
     update(dt) {
-      const w = Renderer.getWidth();
-      let y = 80;
-
+      // Timer + removal only — rendering handled by HUD.renderNotifications
       for (let i = GS.notifications.length - 1; i >= 0; i--) {
         const n = GS.notifications[i];
         n.timer -= dt;
@@ -389,11 +393,6 @@ const Systems = (() => {
           continue;
         }
         n.alpha = Math.min(1, n.timer);
-        const ctx = Renderer.getCtx();
-        ctx.globalAlpha = n.alpha;
-        Renderer.drawText(n.text, w / 2, y, '#ffcc00', 16, 'center', true);
-        ctx.globalAlpha = 1;
-        y += 24;
       }
     }
   };

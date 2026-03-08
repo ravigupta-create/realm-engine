@@ -343,6 +343,20 @@ const Quests = (() => {
 
       checkQuestComplete(quest);
     }
+
+    // Offer procedural side quest if player has few active
+    if (GS.player && GS.player.stats.level >= 3) {
+      const activeProc = GS.quests.filter(q => q.type === 'procedural' && q.state === 'active');
+      if (activeProc.length < 2) {
+        const quest = generateProceduralQuest(GS.player.stats.level);
+        if (quest) {
+          quest.state = 'active';
+          GS.quests.push(quest);
+          Core.addNotification(`Side quest: ${quest.name}`, 3);
+          if (typeof AudioManager !== 'undefined') AudioManager.playSFX('quest');
+        }
+      }
+    }
   }
 
   function onChestOpened() {

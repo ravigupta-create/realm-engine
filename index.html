@@ -167,15 +167,61 @@
 
             // State-specific updates
             if (GS.state === GameStates.PLAY) {
+              // Fishing input
+              const fishState = Fishing.getState();
+              if (fishState.active) {
+                // Space to reel during bite phase
+                if (Input.actionPressed(Input.Actions.CONFIRM) && fishState.phase === 'bite') {
+                  Fishing.onReel();
+                }
+                // ESC to cancel fishing
+                if (Input.actionPressed(Input.Actions.CANCEL)) {
+                  Fishing.cancel();
+                }
+              } else {
+                // Start fishing when pressing E near water
+                if (Input.actionPressed(Input.Actions.INTERACT)) {
+                  if (WorldManager.isFacingWater(GS.player)) {
+                    Fishing.startFishing();
+                  }
+                }
+              }
+
+              // Quickslot keys 1-4 — use skill outside combat
+              for (let si = 0; si < 4; si++) {
+                const slotAction = [Input.Actions.SLOT1, Input.Actions.SLOT2, Input.Actions.SLOT3, Input.Actions.SLOT4][si];
+                if (Input.actionPressed(slotAction) && GS.player.skills && GS.player.skills[si]) {
+                  const skill = GS.player.skills[si];
+                  if (skill.type === 'heal' && GS.player.stats.mp >= skill.mpCost) {
+                    const healAmt = Math.floor(GS.player.stats.int * (skill.power || 1));
+                    GS.player.stats.hp = Math.min(GS.player.stats.maxHp, GS.player.stats.hp + healAmt);
+                    GS.player.stats.mp -= skill.mpCost;
+                    Core.addNotification(`${skill.name}: +${healAmt} HP`, 2);
+                    if (typeof AudioManager !== 'undefined') AudioManager.playSFX('heal');
+                    if (typeof Particles !== 'undefined') Particles.emit('heal', Renderer.getWidth() / 2, Renderer.getHeight() / 2, 10);
+                  } else if (skill.type === 'buff' && GS.player.stats.mp >= skill.mpCost) {
+                    GS.player.stats.mp -= skill.mpCost;
+                    Core.addNotification(`${skill.name} activated!`, 2);
+                    if (typeof AudioManager !== 'undefined') AudioManager.playSFX('buff');
+                  } else if (GS.player.stats.mp < skill.mpCost) {
+                    Core.addNotification('Not enough MP!', 1.5);
+                  } else {
+                    Core.addNotification('Skills usable in combat', 1.5);
+                  }
+                }
+              }
+
               // Keyboard shortcuts
-              if (Input.actionPressed(Input.Actions.INVENTORY)) {
-                Core.setState(GameStates.INVENTORY);
-              }
-              if (Input.actionPressed(Input.Actions.MENU)) {
-                Core.setState(GameStates.PAUSED);
-              }
-              if (Input.actionPressed(Input.Actions.QUEST_LOG)) {
-                Core.setState(GameStates.QUEST_LOG);
+              if (!fishState.active) {
+                if (Input.actionPressed(Input.Actions.INVENTORY)) {
+                  Core.setState(GameStates.INVENTORY);
+                }
+                if (Input.actionPressed(Input.Actions.MENU)) {
+                  Core.setState(GameStates.PAUSED);
+                }
+                if (Input.actionPressed(Input.Actions.QUEST_LOG)) {
+                  Core.setState(GameStates.QUEST_LOG);
+                }
               }
             }
 
@@ -186,6 +232,7 @@
             Menus.update(dt);
             Particles.update(dt);
             Fishing.update(dt);
+            Systems.NotificationSystem.update(dt);
 
             // Ambient particles based on zone
             if (GS.state === GameStates.PLAY) {
@@ -224,9 +271,7 @@
             Inventory.render();
             QuestLog.render();
             Menus.render();
-
-            // Notifications (always on top)
-            Systems.NotificationSystem.update(dt);
+            Fishing.render();
 
             // Clear input flags at end of frame
             Input.endFrame();

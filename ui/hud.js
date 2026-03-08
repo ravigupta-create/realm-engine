@@ -113,7 +113,7 @@ const HUD = (() => {
     }
 
     // ======== Controls hint ========
-    Renderer.drawText('I:Inventory  Q:Quests  E:Interact  P:Pause', w / 2, h - 8, '#444', 9, 'center');
+    Renderer.drawText('I:Inventory  Q:Quests  E:Interact/Fish  P:Pause  1-4:Skills', w / 2, h - 8, '#444', 9, 'center');
 
     // ======== Minimap ========
     Minimap.render();
@@ -126,20 +126,13 @@ const HUD = (() => {
   }
 
   function renderNotifications(w, h) {
+    // Render only — timer/removal handled by Systems.NotificationSystem
     const notifs = GS.notifications;
-    for (let i = notifs.length - 1; i >= 0; i--) {
+    for (let i = 0; i < notifs.length; i++) {
       const n = notifs[i];
-      n.timer -= GS.dt;
-      if (n.timer <= 0) {
-        n.alpha -= GS.dt * 2;
-        if (n.alpha <= 0) {
-          notifs.splice(i, 1);
-          continue;
-        }
-      }
-      const ny = h * 0.2 + (notifs.length - 1 - i) * 24;
+      const ny = h * 0.2 + i * 24;
       const ctx = Renderer.getCtx();
-      ctx.globalAlpha = Math.min(1, n.alpha);
+      ctx.globalAlpha = Math.min(1, n.alpha || 1);
       Renderer.drawText(n.text, w / 2, ny, '#f0c040', 14, 'center', true);
       ctx.globalAlpha = 1;
     }

@@ -240,6 +240,20 @@ const WorldManager = (() => {
     }
   }
 
+  function isFacingWater(entity) {
+    if (!_currentZone || !entity) return false;
+    let tx = Math.floor(entity.x);
+    let ty = Math.floor(entity.y);
+    switch (entity.dir) {
+      case 'up': ty -= 1; break;
+      case 'down': ty += 1; break;
+      case 'left': tx -= 1; break;
+      case 'right': tx += 1; break;
+    }
+    if (tx < 0 || ty < 0 || tx >= _currentZone.width || ty >= _currentZone.height) return false;
+    return Tileset.isWater(_currentZone.ground[ty][tx]);
+  }
+
   function getZone() { return _currentZone; }
 
   function update(dt) {
@@ -257,7 +271,7 @@ const WorldManager = (() => {
 
   return {
     loadZone, getZone, update,
-    isTileBlocked, canMoveTo, checkZoneExit,
+    isTileBlocked, canMoveTo, checkZoneExit, isFacingWater,
     getEntitiesNear, rebuildSpatialGrid, updateEntityGrid,
     exploreTiles
   };

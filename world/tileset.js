@@ -57,6 +57,10 @@ const Tileset = (() => {
     return solid.has(tileType);
   }
 
+  function isWater(tileType) {
+    return tileType === T.WATER;
+  }
+
   function isInteractable(tileType) {
     return tileType === T.CHEST || tileType === T.SIGN || tileType === T.DOOR || tileType === T.ZONE_EXIT;
   }
@@ -122,7 +126,7 @@ const Tileset = (() => {
   }
 
   return {
-    T, isSolid, isInteractable, getSprite, getObjectSprite,
+    T, isSolid, isWater, isInteractable, getSprite, getObjectSprite,
     isObjectTile, getGroundUnder, update,
     get animFrame() { return _animFrame; }
   };
