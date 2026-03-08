@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Realm Engine</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div>REALM ENGINE</div>
+    <div id="loading-bar-bg">
+      <div id="loading-bar"></div>
+    </div>
+    <div id="loading-text">Initializing...</div>
+  </div>
+
+  <!-- Game Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Scripts — load order matters -->
+  <!-- Engine -->
+  <script src="engine/utils.js"></script>
+  <script src="engine/core.js"></script>
+  <script src="engine/input.js"></script>
+  <script src="engine/renderer.js"></script>
+  <script src="engine/audio.js"></script>
+  <script src="engine/particles.js"></script>
+  <script src="engine/save.js"></script>
+
+  <!-- Sprites -->
+  <script src="sprites/sprite-gen.js"></script>
+  <script src="sprites/animations.js"></script>
+
+  <!-- World -->
+  <script src="world/tileset.js"></script>
+  <script src="world/zones.js"></script>
+  <script src="world/world-manager.js"></script>
+  <script src="world/map-renderer.js"></script>
+  <script src="world/minimap.js"></script>
+  <script src="world/day-night.js"></script>
+
+  <!-- ECS -->
+  <script src="ecs/ecs.js"></script>
+  <script src="ecs/components.js"></script>
+  <script src="ecs/systems.js"></script>
+
+  <!-- Data -->
+  <script src="data/classes.js"></script>
+  <script src="data/items.js"></script>
+  <script src="data/enemies.js"></script>
+  <script src="data/crafting.js"></script>
+  <script src="data/npcs.js"></script>
+  <script src="data/quests.js"></script>
+
+  <!-- Combat -->
+  <script src="combat/abilities.js"></script>
+  <script src="combat/enemy-ai.js"></script>
+  <script src="combat/combat.js"></script>
+
+  <!-- UI -->
+  <script src="ui/dialogue.js"></script>
+  <script src="ui/quest-log.js"></script>
+  <script src="ui/hud.js"></script>
+  <script src="ui/inventory.js"></script>
+  <script src="ui/menus.js"></script>
+
+  <!-- Main init -->
+  <script>
+    (function () {
+      const loadingBar = document.getElementById('loading-bar');
+      const loadingText = document.getElementById('loading-text');
+      const loadingScreen = document.getElementById('loading-screen');
+      const canvas = document.getElementById('game-canvas');
+
+      function setProgress(pct, text) {
+        loadingBar.style.width = pct + '%';
+        loadingText.textContent = text;
+      }
+
+      async function boot() {
+        try {
+          setProgress(10, 'Initializing engine...');
+
+          // Init renderer
+          Renderer.init(canvas);
+
+          setProgress(20, 'Generating sprites...');
+          await new Promise(r => setTimeout(r, 50));
+
+          // Generate all sprites
+          SpriteGen.generateAll();
+
+          setProgress(50, 'Setting up input...');
+          Input.init(canvas);
+
+          setProgress(60, 'Initializing audio...');
+          AudioManager.init();
+
+          setProgress(70, 'Setting up particles...');
+          Particles.init();
+          Minimap.init();
+
+          setProgress(80, 'Registering systems...');
+          Systems.registerAll();
+
+          setProgress(90, 'Starting game...');
+
+          // Register update callbacks
+          Core.onUpdate((dt) => {
+            if (GS.state === GameStates.PLAY) {
+              ECS.runSystems(dt);
+              WorldManager.update(dt);
+              Tileset.update(dt);
+              Quests.checkLevelQuests();
+            }
+
+            // State-specific updates
+            if (GS.state === GameStates.PLAY) {
+              // Keyboard shortcuts
+              if (Input.actionPressed(Input.Actions.INVENTORY)) {
+                Core.setState(GameStates.INVENTORY);
+              }
+              if (Input.actionPressed(Input.Actions.MENU)) {
+                Core.setState(GameStates.PAUSED);
+              }
+              if (Input.actionPressed(Input.Actions.QUEST_LOG)) {
+                Core.setState(GameStates.QUEST_LOG);
+              }
+            }
+
+            Combat.update(dt);
+            Dialogue.update(dt);
+            Inventory.update(dt);
+            QuestLog.update(dt);
+            Menus.update(dt);
+            Particles.update(dt);
+
+            // Ambient particles based on zone
+            if (GS.state === GameStates.PLAY) {
+              const zone = WorldManager.getZone();
+              if (zone) {
+                if (zone.id === 'frostpeak') Particles.spawnAmbient('snow', dt);
+                else if (zone.id === 'whisperwood') Particles.spawnAmbient('firefly', dt);
+                else if (zone.id === 'sunscorch') Particles.spawnAmbient('dust', dt);
+              }
+            }
+          });
+
+          // Register render callbacks
+          Core.onRender((dt) => {
+            Renderer.clear();
+
+            if (GS.state === GameStates.PLAY || GS.state === GameStates.DIALOGUE ||
+                GS.state === GameStates.INVENTORY || GS.state === GameStates.QUEST_LOG ||
+                GS.state === GameStates.PAUSED) {
+              // World rendering
+              MapRenderer.render();
+              MapRenderer.renderExits();
+              Systems.EntityRenderSystem.update(dt);
+              DayNight.render();
+              Particles.render();
+              HUD.render();
+            }
+
+            // Overlay UIs
+            Combat.render();
+            Dialogue.render();
+            Inventory.render();
+            QuestLog.render();
+            Menus.render();
+
+            // Notifications (always on top)
+            Systems.NotificationSystem.update(dt);
+
+            // Clear input flags at end of frame
+            Input.endFrame();
+          });
+
+          setProgress(100, 'Ready!');
+          await new Promise(r => setTimeout(r, 300));
+
+          // Hide loading screen
+          loadingScreen.classList.add('hidden');
+
+          // Start at title screen
+          Core.setState(GameStates.MENU);
+          AudioManager.playMusic('town');
+
+          // Start game loop
+          await Core.init();
+
+        } catch (err) {
+          setProgress(0, 'Error: ' + err.message);
+          console.error('Boot error:', err);
+        }
+      }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>
