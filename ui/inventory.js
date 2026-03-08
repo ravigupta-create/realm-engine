@@ -45,6 +45,13 @@ const Inventory = (() => {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
+    // Mouse wheel scroll
+    const wheel = Input.getWheelDelta();
+    if (wheel !== 0) {
+      _selectedSlot = Math.max(0, Math.min(items.length - 1, _selectedSlot + Math.sign(wheel)));
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
       const item = items[_selectedSlot];
       if (item.type === 'equipment') {
@@ -67,6 +74,13 @@ const Inventory = (() => {
     }
     if (Input.actionPressed(Input.Actions.DOWN)) {
       _selectedSlot = Math.min(slots.length - 1, _selectedSlot + 1);
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    // Mouse wheel scroll
+    const wheel = Input.getWheelDelta();
+    if (wheel !== 0) {
+      _selectedSlot = Math.max(0, Math.min(slots.length - 1, _selectedSlot + Math.sign(wheel)));
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
@@ -180,7 +194,7 @@ const Inventory = (() => {
     else if (_tab === 'equipment') renderEquipment(w, h);
     else if (_tab === 'stats') renderStats(w, h);
 
-    Renderer.drawText('ESC to close | LEFT/RIGHT tabs | ENTER to use/equip', w / 2, h - 50, '#555', 11, 'center');
+    Renderer.drawText('ESC to close | LEFT/RIGHT tabs | Scroll / Arrows + ENTER', w / 2, h - 50, '#555', 11, 'center');
   }
 
   function renderItems(w, h) {

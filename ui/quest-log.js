@@ -18,6 +18,13 @@ const QuestLog = (() => {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
+    // Mouse wheel scroll
+    const wheel = Input.getWheelDelta();
+    if (wheel !== 0) {
+      _selectedQuest = Math.max(0, Math.min(quests.length - 1, _selectedQuest + Math.sign(wheel)));
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
     if (Input.actionPressed(Input.Actions.LEFT) || Input.actionPressed(Input.Actions.RIGHT)) {
       _tab = _tab === 'active' ? 'completed' : 'active';
       _selectedQuest = 0;

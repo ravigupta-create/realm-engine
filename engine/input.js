@@ -6,6 +6,7 @@ const Input = (() => {
   const justReleased = {};
   const mouse = { x: 0, y: 0, clicked: false, down: false };
   const touch = { active: false, x: 0, y: 0, dx: 0, dy: 0 };
+  let _wheelDelta = 0;
 
   // Virtual D-pad for touch
   let _touchStartX = 0, _touchStartY = 0;
@@ -110,6 +111,12 @@ const Input = (() => {
       mouse.down = false;
     });
 
+    // Mouse wheel
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      _wheelDelta += Math.sign(e.deltaY);
+    }, { passive: false });
+
     // Touch
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -145,10 +152,15 @@ const Input = (() => {
     for (const k in justPressed) delete justPressed[k];
     for (const k in justReleased) delete justReleased[k];
     mouse.clicked = false;
+    _wheelDelta = 0;
+  }
+
+  function getWheelDelta() {
+    return _wheelDelta;
   }
 
   return {
     init, endFrame, keys, justPressed, mouse, touch,
-    Actions, actionHeld, actionPressed, anyActionPressed, getMovement
+    Actions, actionHeld, actionPressed, anyActionPressed, getMovement, getWheelDelta
   };
 })();

@@ -759,6 +759,11 @@ const Combat = (() => {
       _selectedAction = (_selectedAction + 1) % actions.length;
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
+    const actionWheel = Input.getWheelDelta();
+    if (actionWheel !== 0) {
+      _selectedAction = (_selectedAction + Math.sign(actionWheel) + actions.length) % actions.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
 
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
@@ -805,6 +810,8 @@ const Combat = (() => {
     if (Input.actionPressed(Input.Actions.RIGHT)) _selectedTarget = (_selectedTarget + 1) % live.length;
     if (Input.actionPressed(Input.Actions.UP)) _selectedTarget = (_selectedTarget - 1 + live.length) % live.length;
     if (Input.actionPressed(Input.Actions.DOWN)) _selectedTarget = (_selectedTarget + 1) % live.length;
+    const targetWheel = Input.getWheelDelta();
+    if (targetWheel !== 0) _selectedTarget = (_selectedTarget + Math.sign(targetWheel) + live.length) % live.length;
 
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
       if (_pendingAction.type === 'attack') {
@@ -823,6 +830,8 @@ const Combat = (() => {
     const skills = GS.player.skills || [];
     if (Input.actionPressed(Input.Actions.UP)) _selectedSkill = (_selectedSkill - 1 + skills.length) % skills.length;
     if (Input.actionPressed(Input.Actions.DOWN)) _selectedSkill = (_selectedSkill + 1) % skills.length;
+    const skillWheel = Input.getWheelDelta();
+    if (skillWheel !== 0) _selectedSkill = (_selectedSkill + Math.sign(skillWheel) + skills.length) % skills.length;
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
       const skill = skills[_selectedSkill];
       if (skill.type === 'damage' && getLiveEnemies().length > 1 && skill.targetType !== 'all_enemies') {
@@ -844,6 +853,8 @@ const Combat = (() => {
     if (items.length === 0) { _subMenu = null; return; }
     if (Input.actionPressed(Input.Actions.UP)) _selectedItem = (_selectedItem - 1 + items.length) % items.length;
     if (Input.actionPressed(Input.Actions.DOWN)) _selectedItem = (_selectedItem + 1) % items.length;
+    const itemWheel = Input.getWheelDelta();
+    if (itemWheel !== 0) _selectedItem = (_selectedItem + Math.sign(itemWheel) + items.length) % items.length;
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
       if (playerUseItem(items[_selectedItem])) {
         _subMenu = null;

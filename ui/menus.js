@@ -59,6 +59,13 @@ const Menus = (() => {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
+    // Mouse wheel scroll
+    const titleWheel = Input.getWheelDelta();
+    if (titleWheel !== 0) {
+      _titleSelected = (_titleSelected + Math.sign(titleWheel) + titleOptions.length) % titleOptions.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
       switch (titleOptions[_titleSelected]) {
@@ -207,7 +214,7 @@ const Menus = (() => {
     }
 
     // Footer
-    Renderer.drawText('Arrow Keys to navigate | Enter to select', w / 2, h - 60, '#444', 12, 'center');
+    Renderer.drawText('Arrow Keys / Scroll to navigate | Enter to select', w / 2, h - 60, '#444', 12, 'center');
     Renderer.drawText('100% Client-Side | Zero External Assets | Free Forever', w / 2, h - 40, '#333', 10, 'center');
   }
 
@@ -241,6 +248,13 @@ const Menus = (() => {
     }
     if (Input.actionPressed(Input.Actions.DOWN)) {
       _classSelected = (_classSelected + 1) % classes.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    // Mouse wheel scroll
+    const classWheel = Input.getWheelDelta();
+    if (classWheel !== 0) {
+      _classSelected = (_classSelected + Math.sign(classWheel) + classes.length) % classes.length;
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
@@ -358,7 +372,7 @@ const Menus = (() => {
     }
 
     // Footer
-    Renderer.drawText('\u2191\u2193 Select  |  ENTER Choose  |  ESC Back', w / 2, h - 38, '#4a4a60', 11, 'center');
+    Renderer.drawText('\u2191\u2193 / Scroll to select  |  ENTER Choose  |  ESC Back', w / 2, h - 38, '#4a4a60', 11, 'center');
   }
 
   function startNewGame(classType, name) {
@@ -490,6 +504,13 @@ const Menus = (() => {
     }
     if (Input.actionPressed(Input.Actions.DOWN)) {
       _pauseSelected = (_pauseSelected + 1) % pauseOptions.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    // Mouse wheel scroll
+    const pauseWheel = Input.getWheelDelta();
+    if (pauseWheel !== 0) {
+      _pauseSelected = (_pauseSelected + Math.sign(pauseWheel) + pauseOptions.length) % pauseOptions.length;
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 

@@ -101,6 +101,13 @@ const Dialogue = (() => {
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
+    // Mouse wheel scroll
+    const choiceWheel = Input.getWheelDelta();
+    if (choiceWheel !== 0) {
+      _selectedChoice = (_selectedChoice + Math.sign(choiceWheel) + choices.length) % choices.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
       const choice = choices[_selectedChoice];
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_select');
@@ -190,6 +197,13 @@ const Dialogue = (() => {
     }
     if (Input.actionPressed(Input.Actions.DOWN)) {
       _shopSelected = (_shopSelected + 1) % _shopItems.length;
+      if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
+    }
+
+    // Mouse wheel scroll
+    const shopWheel = Input.getWheelDelta();
+    if (shopWheel !== 0) {
+      _shopSelected = (_shopSelected + Math.sign(shopWheel) + _shopItems.length) % _shopItems.length;
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('menu_move');
     }
 
