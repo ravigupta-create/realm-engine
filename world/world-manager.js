@@ -40,9 +40,14 @@ const WorldManager = (() => {
     Renderer.markGroundDirty();
 
     // Play zone music
-    if (typeof Audio !== 'undefined' && Audio.playMusic) {
-      Audio.playMusic(zone.music);
+    if (typeof AudioManager !== 'undefined' && AudioManager.playMusic) {
+      AudioManager.playMusic(zone.music);
     }
+
+    // Zone event hooks
+    if (typeof Quests !== 'undefined') Quests.onZoneEntered(zoneId);
+    if (typeof DailyChallenges !== 'undefined') DailyChallenges.onZoneVisited();
+    if (typeof Achievements !== 'undefined') Achievements.onZoneVisited(zoneId);
 
     // Auto-save on zone transition
     if (typeof SaveSystem !== 'undefined' && SaveSystem.autoSave && GS.state === GameStates.PLAY) {

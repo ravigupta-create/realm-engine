@@ -385,6 +385,12 @@ const Menus = (() => {
     GS.gameTime = 360; // Start at 6:00 AM
     GS.playTime = 0;
     GS.notifications = [];
+    GS.ngPlus = 0;
+    GS.difficulty = 'normal';
+    GS.bestiary = {};
+    GS.bestiaryRewards = {};
+    GS.dailyChallenges = null;
+    GS.achievementCounters = null;
 
     // Create player
     GS.player = Classes.createPlayer(classType, name);
@@ -421,6 +427,7 @@ const Menus = (() => {
     s.xp = 0;
     s.xpToNext = 99999;
     s.gold = 99999;
+    player.gold = 99999;
     s.maxHp = 999; s.hp = 999;
     s.maxMp = 999; s.mp = 999;
     s.str = 99; s.def = 99; s.int = 99; s.agi = 99; s.luk = 99;

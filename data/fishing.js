@@ -60,11 +60,11 @@ const Fishing = (() => {
   function canFish() {
     if (_state.active) return false;
     // Check if player has fishing rod
-    const inv = GS.player.inventory?.items || [];
-    const hasRod = inv.some(i => i && i.id === 'fishing_rod') ||
-                   (GS.player.inventory?.equipment?.weapon?.id === 'fishing_rod');
+    const inv = GS.player.items || [];
+    const hasRod = inv.some(i => i && (i.id === 'fishing_rod' || i.name === 'Fishing Rod')) ||
+                   (GS.player.equipment?.weapon?.id === 'fishing_rod');
     // Also check if fishing skill unlocked
-    return hasRod || (GS.player.stats.fishingUnlocked === true);
+    return hasRod || (GS.player.fishingUnlocked === true);
   }
 
   function startFishing() {
@@ -207,7 +207,8 @@ const Fishing = (() => {
     // Award gold (combo bonus)
     const comboMult = 1 + Math.min(_state.combo * 0.1, 1.0);
     const gold = Math.floor(fish.value * comboMult);
-    GS.player.stats.gold += gold;
+    GS.player.gold = (GS.player.gold || 0) + gold;
+    GS.player.stats.gold = GS.player.gold;
 
     // Award XP
     const xp = Math.floor(fish.xp * comboMult);
@@ -219,7 +220,9 @@ const Fishing = (() => {
 
     if (typeof AudioManager !== 'undefined') AudioManager.playSFX('quest_complete');
     if (typeof Achievements !== 'undefined') Achievements.onFishCaught();
-    if (typeof Particles !== 'undefined') Particles.emit('levelup', Renderer.canvas.width / 2, Renderer.canvas.height / 2, 10);
+    if (typeof Quests !== 'undefined') Quests.onFishCaught();
+    if (typeof DailyChallenges !== 'undefined') DailyChallenges.onFishCaught();
+    if (typeof Particles !== 'undefined') Particles.emit('levelup', Renderer.getWidth() / 2, Renderer.getHeight() / 2, 10);
 
     // Special treasure chest catch
     if (fish.id === 'treasure_chest') {

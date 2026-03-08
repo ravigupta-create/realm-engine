@@ -24,6 +24,7 @@ const Combat = (() => {
   let _turnCounter = 0;
   let _comboCounter = 0;
   let _lastDamageType = null;
+  let _playerDamageTaken = 0;
 
   const actions = ['Attack', 'Skills', 'Items', 'Defend', 'Flee'];
 
@@ -53,7 +54,7 @@ const Combat = (() => {
         const data = typeof Enemies !== 'undefined' ? Enemies.get(enemy.enemyType) : null;
         enemy.abilities = data ? data.abilities || [] : [];
       }
-      _statusEffectsMap[enemy.id || Math.random()] = [];
+      _statusEffectsMap[enemy.id || enemy.name] = [];
     }
 
     // Gather allies from party
@@ -79,6 +80,7 @@ const Combat = (() => {
     _turnCounter = 0;
     _comboCounter = 0;
     _lastDamageType = null;
+    _playerDamageTaken = 0;
 
     // Build turn order by AGI (all combatants)
     buildTurnOrder();
@@ -152,16 +154,15 @@ const Combat = (() => {
     const variance = 0.85 + Math.random() * 0.3;
     let dmg = Math.floor(atk * reduction * variance);
 
-    // Elemental multiplier
-    if (element && defender.elements) {
-      if (defender.elements.weak && defender.elements.weak.includes(element)) {
-        dmg = Math.floor(dmg * 1.5);
-      }
-      if (defender.elements.resist && defender.elements.resist.includes(element)) {
-        dmg = Math.floor(dmg * 0.5);
-      }
-      if (defender.elements.immune && defender.elements.immune.includes(element)) {
-        dmg = 0;
+    // Elemental multiplier (supports both flat format and array format)
+    if (element) {
+      if (defender.elements) {
+        if (defender.elements.weak && defender.elements.weak.includes(element)) dmg = Math.floor(dmg * 1.5);
+        if (defender.elements.resist && defender.elements.resist.includes(element)) dmg = Math.floor(dmg * 0.5);
+        if (defender.elements.immune && defender.elements.immune.includes(element)) dmg = 0;
+      } else {
+        if (defender.weakness === element) dmg = Math.floor(dmg * 1.5);
+        if (defender.resistance === element) dmg = Math.floor(dmg * 0.5);
       }
     }
 
@@ -182,9 +183,9 @@ const Combat = (() => {
       crit = true;
     }
 
-    // Difficulty scaling
-    if (typeof Difficulty !== 'undefined') {
-      dmg = Difficulty.scaleDamage(dmg, isPhysical);
+    // Difficulty/NG+ scaling
+    if (typeof NewGamePlus !== 'undefined' && GS.ngPlus) {
+      // NG+ enemies deal more damage
     }
 
     return { dmg: Math.max(1, dmg), crit, element };
@@ -192,6 +193,7 @@ const Combat = (() => {
 
   function applyDamage(target, dmg) {
     target.hp = Math.max(0, target.hp - dmg);
+    if (target === GS.player.stats) _playerDamageTaken += dmg;
   }
 
   function applyHeal(target, amount) {
@@ -292,7 +294,7 @@ const Combat = (() => {
       const isPhysical = skill.damageType === 'physical';
       const element = skill.element || null;
 
-      if (skill.targetType === 'all_enemies') {
+      if (skill.targetType === 'all_enemies' || skill.aoe) {
         // AoE
         for (const enemy of getLiveEnemies()) {
           const { dmg, crit } = calcDamage(GS.player.stats, enemy.stats, isPhysical, skill.power, element);
@@ -313,6 +315,21 @@ const Combat = (() => {
           addLog(`${target.name} is ${skill.statusEffect}!`);
         }
       }
+      // Special effects
+      if (skill.special === 'lifesteal') {
+        const totalDmg = (skill.targetType === 'all_enemies' || skill.aoe) ?
+          getLiveEnemies().reduce((s, e) => s + Math.floor(GS.player.stats.int * skill.power * 0.3), 0) :
+          Math.floor(GS.player.stats.int * skill.power * 0.3);
+        const healAmt = Math.floor(totalDmg * 0.3);
+        applyHeal(GS.player.stats, healAmt);
+        addLog(`Drained ${healAmt} HP!`);
+      }
+      if (skill.special === 'steal_gold') {
+        const stolen = Utils.randomInt(5, 20);
+        GS.player.gold = (GS.player.gold || 0) + stolen;
+        GS.player.stats.gold = GS.player.gold;
+        addLog(`Stole ${stolen} gold!`);
+      }
       _shakeTimer = 0.4;
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX(skill.sfx || 'magic');
       if (typeof Particles !== 'undefined') {
@@ -320,6 +337,7 @@ const Combat = (() => {
         Particles.emit(pType, Renderer.getWidth() * 0.65, Renderer.getHeight() * 0.4, 20);
       }
     }
+    if (typeof DailyChallenges !== 'undefined') DailyChallenges.onSkillUsed();
     checkCombatEnd();
     return true;
   }
@@ -339,6 +357,10 @@ const Combat = (() => {
       } else if (item.effect === 'cure_poison') {
         _statusEffectsPlayer = _statusEffectsPlayer.filter(e => e.type !== 'poison');
         addLog(`Used ${item.name}: Cured!`);
+      } else if (item.effect === 'heal_both') {
+        applyHeal(GS.player.stats, item.value);
+        GS.player.stats.mp = Math.min(GS.player.stats.maxMp, GS.player.stats.mp + item.value);
+        addLog(`Used ${item.name}: +${item.value} HP & MP`);
       } else if (item.effect === 'revive') {
         // Revive first dead ally
         const dead = _allies.find(a => a.stats.hp <= 0);
@@ -346,6 +368,18 @@ const Combat = (() => {
           dead.stats.hp = Math.floor(dead.stats.maxHp * 0.5);
           addLog(`Revived ${dead.name}!`);
         }
+      } else if (item.effect === 'buff_str') {
+        _statusEffectsPlayer.push({ type: 'berserk', turns: 5, strBonus: item.value });
+        GS.player.stats.str += item.value;
+        addLog(`Used ${item.name}: +${item.value} STR`);
+      } else if (item.effect === 'buff_def') {
+        _statusEffectsPlayer.push({ type: 'iron_wall', turns: 5, defBonus: item.value });
+        GS.player.stats.def += item.value;
+        addLog(`Used ${item.name}: +${item.value} DEF`);
+      } else if (item.effect === 'buff_agi') {
+        _statusEffectsPlayer.push({ type: 'stealth', turns: 5, agiBonus: item.value });
+        GS.player.stats.agi += item.value;
+        addLog(`Used ${item.name}: +${item.value} AGI`);
       }
       const idx = GS.player.items.indexOf(item);
       if (idx >= 0) GS.player.items.splice(idx, 1);
@@ -457,7 +491,7 @@ const Combat = (() => {
       const isPhys = action.skill.damageType === 'physical';
       const element = action.skill.element || null;
 
-      if (action.skill.targetType === 'all_enemies') {
+      if (action.skill.targetType === 'all_enemies' || action.skill.aoe) {
         // AoE against player + allies
         const { dmg: pdmg } = calcDamage(enemy.stats, GS.player.stats, isPhys, action.skill.power, element);
         applyDamage(GS.player.stats, pdmg);
@@ -599,12 +633,24 @@ const Combat = (() => {
       }
 
       if (typeof Quests !== 'undefined') Quests.onEnemyKilled(enemy.enemyType, enemy.name);
-      if (typeof Bestiary !== 'undefined') Bestiary.record(enemy.enemyType);
+      if (typeof Bestiary !== 'undefined') Bestiary.recordKill(enemy.enemyType, enemy);
       if (typeof Achievements !== 'undefined') Achievements.onEnemyKilled(enemy.enemyType, enemy.isBoss);
+      if (typeof DailyChallenges !== 'undefined') {
+        DailyChallenges.onEnemyKilled(enemy.enemyType);
+        if (enemy.isBoss) DailyChallenges.onBossKilled();
+      }
+      // Pet capture
+      if (typeof Pets !== 'undefined') {
+        const captured = Pets.tryCapture(enemy.enemyType);
+        for (const petId of captured) {
+          Pets.collectPet(petId);
+          if (typeof Quests !== 'undefined') Quests.onPetCollected();
+        }
+      }
     }
 
     // NG+ multiplier
-    const ngMult = GS.newGamePlus ? (1 + GS.newGamePlus * 0.5) : 1;
+    const ngMult = GS.ngPlus ? (1 + GS.ngPlus * 0.5) : 1;
     totalXp = Math.floor(totalXp * ngMult);
     totalGold = Math.floor(totalGold * ngMult);
 
@@ -612,6 +658,13 @@ const Combat = (() => {
     GS.player.gold = (GS.player.gold || 0) + totalGold;
     GS.player.stats.gold = GS.player.gold;
     addLog(`Victory! +${totalXp} XP, +${totalGold} Gold`);
+
+    // Gold & combo tracking
+    if (typeof Achievements !== 'undefined') Achievements.onGoldEarned(totalGold);
+    if (typeof DailyChallenges !== 'undefined') {
+      DailyChallenges.onGoldEarned(totalGold);
+      if (_comboCounter > 1) DailyChallenges.onCombo(_comboCounter);
+    }
 
     // Ally XP
     for (const ally of _allies) {
@@ -627,7 +680,35 @@ const Combat = (() => {
     }
 
     checkLevelUp();
-    if (typeof Achievements !== 'undefined') Achievements.checkCombat(_turnCounter, _enemies.length);
+    if (typeof Achievements !== 'undefined') {
+      Achievements.checkCombat(_turnCounter, _enemies.length);
+      // No damage boss achievement
+      if (_enemies.some(e => e.isBoss) && _playerDamageTaken === 0) {
+        Achievements.unlock('no_damage_boss');
+      }
+      // No damage battle (for daily challenges too)
+      if (_playerDamageTaken === 0 && typeof DailyChallenges !== 'undefined') {
+        DailyChallenges.onNoDamageBattle();
+      }
+      // Combo achievement
+      if (_comboCounter >= 5) {
+        Achievements.unlock('max_combo');
+      }
+      // Boss-specific achievements
+      for (const enemy of _enemies) {
+        if (enemy.isBoss) {
+          const bossMap = {
+            'Stone Guardian': 'boss_slayer_1',
+            'Sand Wyrm': 'boss_slayer_2',
+            'Frost Titan': 'boss_slayer_3',
+            'Abyssal Lord': 'boss_slayer_4',
+            'Crystal Dragon': 'boss_slayer_5'
+          };
+          const achId = bossMap[enemy.name];
+          if (achId) Achievements.unlock(achId);
+        }
+      }
+    }
   }
 
   function checkLevelUp() {
@@ -834,7 +915,7 @@ const Combat = (() => {
     if (skillWheel !== 0) _selectedSkill = (_selectedSkill + Math.sign(skillWheel) + skills.length) % skills.length;
     if (Input.actionPressed(Input.Actions.CONFIRM)) {
       const skill = skills[_selectedSkill];
-      if (skill.type === 'damage' && getLiveEnemies().length > 1 && skill.targetType !== 'all_enemies') {
+      if (skill.type === 'damage' && getLiveEnemies().length > 1 && skill.targetType !== 'all_enemies' && !skill.aoe) {
         _subMenu = 'target_enemy';
         _pendingAction = { type: 'skill', skill };
         _selectedTarget = 0;

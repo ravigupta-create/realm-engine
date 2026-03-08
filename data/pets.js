@@ -102,6 +102,7 @@ const Pets = (() => {
 
   function addXP(pet, amount) {
     pet.xp += amount;
+    if (typeof DailyChallenges !== 'undefined') DailyChallenges.onPetXP(amount);
     while (pet.xp >= pet.xpToNext) {
       pet.xp -= pet.xpToNext;
       pet.level++;

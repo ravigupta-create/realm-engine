@@ -467,7 +467,11 @@ const Enemies = (() => {
       def: Math.floor(base.def * scale),
       int: Math.floor(base.int * scale),
       agi: Math.floor(base.agi * scale),
-      luk: Math.floor(base.luk * scale)
+      luk: Math.floor(base.luk * scale),
+      // Include elemental data for combat damage calculations
+      element: data.element || 'none',
+      weakness: data.weakness || null,
+      resistance: data.resistance || null
     };
   }
 

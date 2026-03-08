@@ -170,13 +170,22 @@ const Crafting = (() => {
       }
     }
 
-    // Create result item
-    const item = { ...recipe.result, id: Utils.genId() };
+    // Create result item (preserve explicit id like 'fishing_rod' if set)
+    const item = { ...recipe.result };
+    if (!item.id || typeof item.id !== 'string' || item.id.length > 20) {
+      item.id = Utils.genId();
+    }
     if (item.type === 'equipment') {
       item.sellValue = Math.floor(20 * (item.level || 1) * ({ common: 1, uncommon: 2, rare: 5, epic: 10, legendary: 25 }[item.rarity] || 1));
     }
 
     player.items.push(item);
+
+    // Event hooks
+    if (typeof DailyChallenges !== 'undefined') DailyChallenges.onItemCrafted();
+    if (typeof Achievements !== 'undefined') Achievements.onItemCrafted();
+    if (typeof Quests !== 'undefined') Quests.onItemCrafted();
+
     return item;
   }
 

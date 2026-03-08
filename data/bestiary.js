@@ -99,25 +99,29 @@ const Bestiary = (() => {
       rewards.push({ tier: 1, gold: 500, desc: '25% Bestiary — 500 Gold' });
       if (!GS.bestiaryRewards) GS.bestiaryRewards = {};
       GS.bestiaryRewards.tier1 = true;
-      GS.player.stats.gold += 500;
+      GS.player.gold = (GS.player.gold || 0) + 500;
+      GS.player.stats.gold = GS.player.gold;
     }
     if (pct >= 50 && !GS.bestiaryRewards?.tier2) {
       rewards.push({ tier: 2, gold: 1500, desc: '50% Bestiary — 1500 Gold' });
       if (!GS.bestiaryRewards) GS.bestiaryRewards = {};
       GS.bestiaryRewards.tier2 = true;
-      GS.player.stats.gold += 1500;
+      GS.player.gold = (GS.player.gold || 0) + 1500;
+      GS.player.stats.gold = GS.player.gold;
     }
     if (pct >= 75 && !GS.bestiaryRewards?.tier3) {
       rewards.push({ tier: 3, gold: 3000, desc: '75% Bestiary — 3000 Gold' });
       if (!GS.bestiaryRewards) GS.bestiaryRewards = {};
       GS.bestiaryRewards.tier3 = true;
-      GS.player.stats.gold += 3000;
+      GS.player.gold = (GS.player.gold || 0) + 3000;
+      GS.player.stats.gold = GS.player.gold;
     }
     if (pct >= 100 && !GS.bestiaryRewards?.tier4) {
       rewards.push({ tier: 4, gold: 10000, desc: '100% Bestiary — 10000 Gold + Title' });
       if (!GS.bestiaryRewards) GS.bestiaryRewards = {};
       GS.bestiaryRewards.tier4 = true;
-      GS.player.stats.gold += 10000;
+      GS.player.gold = (GS.player.gold || 0) + 10000;
+      GS.player.stats.gold = GS.player.gold;
       GS.player.title = 'Monster Expert';
     }
     for (const r of rewards) {

@@ -220,6 +220,10 @@ const Items = (() => {
     item.sellValue = Math.floor(10 * level * (rarityValue[rarity] || 1));
     item.buyValue = item.sellValue * 3;
 
+    if (rarity === 'legendary' && typeof Achievements !== 'undefined') {
+      Achievements.unlock('legendary_item');
+    }
+
     return item;
   }
 

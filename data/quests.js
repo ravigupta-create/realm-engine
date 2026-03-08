@@ -423,6 +423,8 @@ const Quests = (() => {
     }
 
     if (typeof AudioManager !== 'undefined') AudioManager.playSFX('quest_complete');
+    if (typeof Achievements !== 'undefined') Achievements.onQuestComplete();
+    if (typeof DailyChallenges !== 'undefined') DailyChallenges.onQuestComplete();
   }
 
   function getActiveQuests() {

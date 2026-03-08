@@ -92,12 +92,13 @@ const NewGamePlus = (() => {
     // Reset game state
     GS.ngPlus = prevNG + 1;
     GS.currentZone = 'eldergrove';
-    GS.quests = {};
+    GS.quests = [];
     GS.exploredTiles = {};
     GS.dailyChallenges = null;
 
     // Rebuild player
-    player.stats.gold = Math.floor(player.stats.gold * 0.5); // Keep half gold
+    player.stats.gold = Math.floor((player.gold || player.stats.gold || 0) * 0.5); // Keep half gold
+    player.gold = player.stats.gold;
     player.stats.xp = 0;
     player.items = keptItems;
     player.party = []; // Allies must be re-recruited
@@ -130,7 +131,7 @@ const NewGamePlus = (() => {
 
   function canStartNGPlus() {
     // Can start NG+ after defeating final boss or completing main quest
-    return GS.state === 'VICTORY' || GS.mainQuestComplete === true;
+    return GS.state === GameStates.VICTORY || GS.mainQuestComplete === true;
   }
 
   return {

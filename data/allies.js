@@ -140,6 +140,9 @@ const Allies = (() => {
     GS.player.party.push(ally);
     Core.addNotification(`${ally.name} joined the party!`, 4);
     if (typeof AudioManager !== 'undefined') AudioManager.playSFX('levelup');
+    if (GS.player.party.length >= 3 && typeof Achievements !== 'undefined') {
+      Achievements.unlock('full_party');
+    }
     return ally;
   }
 
@@ -151,7 +154,7 @@ const Allies = (() => {
   function checkAllyLevelUp(ally) {
     const def = allyDefs[ally.id];
     if (!def) return;
-    const xpNeeded = Math.floor(100 * Math.pow(1.5, ally.level - 1));
+    let xpNeeded = Math.floor(100 * Math.pow(1.5, ally.level - 1));
     while (ally.xp >= xpNeeded) {
       ally.xp -= xpNeeded;
       ally.level++;
@@ -163,6 +166,8 @@ const Allies = (() => {
       ally.stats.hp = ally.stats.maxHp;
       ally.stats.mp = ally.stats.maxMp;
       Core.addNotification(`${ally.name} leveled up to Lv.${ally.level}!`, 3);
+      if (typeof DailyChallenges !== 'undefined') DailyChallenges.onAllyLevelUp();
+      xpNeeded = Math.floor(100 * Math.pow(1.5, ally.level - 1)); // Recalculate for next level
     }
   }
 

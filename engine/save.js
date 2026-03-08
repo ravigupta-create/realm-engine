@@ -35,9 +35,29 @@ const SaveSystem = (() => {
       defeatedBosses: GS.defeatedBosses || [],
       exploredTiles: GS.exploredTiles,
       achievements: GS.achievements || [],
+      achievementCounters: GS.achievementCounters ? {
+        ...GS.achievementCounters,
+        zonesVisited: GS.achievementCounters.zonesVisited instanceof Set
+          ? Array.from(GS.achievementCounters.zonesVisited)
+          : (GS.achievementCounters.zonesVisited || [])
+      } : null,
+      ngPlus: GS.ngPlus || 0,
+      difficulty: GS.difficulty || 'normal',
       gameTime: GS.gameTime,
       playTime: GS.playTime,
-      settings: { ...GS.settings }
+      settings: { ...GS.settings },
+      // Pets
+      pets: GS.player.pets ? GS.player.pets.map(p => ({ ...p })) : [],
+      activePetId: GS.player.activePet ? GS.player.activePet.id : null,
+      // Party
+      party: GS.player.party ? GS.player.party.map(a => JSON.parse(JSON.stringify(a))) : [],
+      // Fishing
+      fishingUnlocked: GS.player.fishingUnlocked || false,
+      // Bestiary
+      bestiary: GS.bestiary || {},
+      bestiaryRewards: GS.bestiaryRewards || {},
+      // Daily challenges
+      dailyChallenges: GS.dailyChallenges ? JSON.parse(JSON.stringify(GS.dailyChallenges)) : null
     };
   }
 
@@ -94,6 +114,12 @@ const SaveSystem = (() => {
     GS.gameTime = data.gameTime || 0;
     GS.playTime = data.playTime || 0;
     GS.entities = [];
+    GS.ngPlus = data.ngPlus || 0;
+    GS.difficulty = data.difficulty || 'normal';
+    GS.bestiary = data.bestiary || {};
+    GS.bestiaryRewards = data.bestiaryRewards || {};
+    GS.dailyChallenges = data.dailyChallenges || null;
+    GS.achievementCounters = data.achievementCounters || null;
 
     if (data.settings) {
       Object.assign(GS.settings, data.settings);
@@ -155,6 +181,21 @@ const SaveSystem = (() => {
     GS.player.x = p.x;
     GS.player.y = p.y;
     GS.player.dir = p.dir || 'down';
+
+    // Restore pets
+    GS.player.pets = data.pets || [];
+    if (data.activePetId) {
+      GS.player.activePet = GS.player.pets.find(p => p.id === data.activePetId) || null;
+    }
+
+    // Restore party
+    GS.player.party = data.party || [];
+
+    // Restore fishing
+    GS.player.fishingUnlocked = data.fishingUnlocked || false;
+
+    // Re-init achievements counters
+    if (typeof Achievements !== 'undefined') Achievements.init();
 
     GS.entities.push(GS.player);
 

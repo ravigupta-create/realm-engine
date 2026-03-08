@@ -208,11 +208,13 @@ const Systems = (() => {
       }
       const gold = Utils.randomInt(10 * entity.level, 30 * entity.level);
       GS.player.gold = (GS.player.gold || 0) + gold;
+      GS.player.stats.gold = GS.player.gold;
       Core.addNotification(`+${gold} Gold`, 2);
 
       if (typeof AudioManager !== 'undefined') {
         AudioManager.playSFX('chest');
       }
+      if (typeof Quests !== 'undefined') Quests.onChestOpened();
     }
   }
 
@@ -239,8 +241,10 @@ const Systems = (() => {
         renderList.push(e);
       }
 
-      // Add player
-      renderList.push(GS.player);
+      // Add player (if not already in list from entities loop)
+      if (!renderList.includes(GS.player)) {
+        renderList.push(GS.player);
+      }
 
       // Sort by Y for depth ordering
       renderList.sort((a, b) => a.y - b.y);

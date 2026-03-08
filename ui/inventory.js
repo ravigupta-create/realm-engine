@@ -129,6 +129,26 @@ const Inventory = (() => {
     } else if (item.effect === 'heal_mp') {
       GS.player.stats.mp = Math.min(GS.player.stats.maxMp, GS.player.stats.mp + item.value);
       Core.addNotification(`+${item.value} MP`, 2);
+    } else if (item.effect === 'heal_both') {
+      GS.player.stats.hp = Math.min(GS.player.stats.maxHp, GS.player.stats.hp + item.value);
+      GS.player.stats.mp = Math.min(GS.player.stats.maxMp, GS.player.stats.mp + item.value);
+      Core.addNotification(`+${item.value} HP & MP`, 2);
+    } else if (item.effect === 'revive' && GS.player.party) {
+      const dead = GS.player.party.find(a => a.stats && a.stats.hp <= 0);
+      if (dead) {
+        dead.stats.hp = Math.floor(dead.stats.maxHp * 0.5);
+        Core.addNotification(`Revived ${dead.name}!`, 2);
+      } else {
+        Core.addNotification('No fallen allies to revive.', 2);
+        return; // Don't consume item
+      }
+    } else if (item.effect === 'cure_poison') {
+      Core.addNotification('Poison cured!', 2);
+    } else if (item.effect === 'buff_str') {
+      Core.addNotification(`+${item.value} STR (use in combat)`, 2);
+      return; // Don't consume outside combat
+    } else if (item.effect === 'none') {
+      return; // Tools like fishing rod - don't consume
     }
     const idx = GS.player.items.indexOf(item);
     if (idx >= 0) GS.player.items.splice(idx, 1);

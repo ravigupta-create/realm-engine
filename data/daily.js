@@ -214,7 +214,8 @@ const DailyChallenges = (() => {
     GS.dailyChallenges.totalCompleted++;
 
     if (c.reward.gold) {
-      GS.player.stats.gold += c.reward.gold;
+      GS.player.gold = (GS.player.gold || 0) + c.reward.gold;
+      GS.player.stats.gold = GS.player.gold;
       Core.addNotification(`+${c.reward.gold} gold!`, 2);
     }
     if (c.reward.xp) {
@@ -226,7 +227,8 @@ const DailyChallenges = (() => {
     if (GS.dailyChallenges.challenges.every(ch => ch.claimed)) {
       // Bonus reward for all dailies
       const bonusGold = 100 * (1 + GS.dailyChallenges.streak * 0.2);
-      GS.player.stats.gold += Math.floor(bonusGold);
+      GS.player.gold = (GS.player.gold || 0) + Math.floor(bonusGold);
+      GS.player.stats.gold = GS.player.gold;
       Core.addNotification(`All dailies done! Bonus: ${Math.floor(bonusGold)}g!`, 4);
       if (typeof Achievements !== 'undefined') Achievements.onDailyComplete();
     }

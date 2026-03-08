@@ -49,7 +49,7 @@ const Enchanting = (() => {
     },
     vitality: {
       name: 'Vital', slot: 'armor', tier: 1,
-      cost: { gold: 100, materials: { herb: 3 } },
+      cost: { gold: 100, materials: { herb_bundle: 3 } },
       bonus: { hp: 20 },
       desc: 'Increased max HP'
     },
@@ -61,7 +61,7 @@ const Enchanting = (() => {
     },
     thorns: {
       name: 'Thorned', slot: 'armor', tier: 2,
-      cost: { gold: 250, materials: { iron_ore: 5, bone: 3 } },
+      cost: { gold: 250, materials: { iron_ore: 5, ancient_bone: 3 } },
       bonus: { def: 3 }, special: 'thorns',
       desc: 'Reflects 15% damage to attackers'
     },
@@ -87,13 +87,13 @@ const Enchanting = (() => {
     },
     wise: {
       name: 'Wise', slot: 'accessory', tier: 2,
-      cost: { gold: 300, materials: { crystal_dust: 3, herb: 3 } },
+      cost: { gold: 300, materials: { crystal_dust: 3, herb_bundle: 3 } },
       bonus: { int: 6, mp: 20 },
       desc: 'Increased intelligence and mana'
     },
     berserker: {
       name: 'Berserker', slot: 'accessory', tier: 2,
-      cost: { gold: 300, materials: { bone: 5, blood_ruby: 1 } },
+      cost: { gold: 300, materials: { ancient_bone: 5, blood_ruby: 1 } },
       bonus: { str: 8 }, special: 'berserk_boost',
       desc: '+20% damage when below 30% HP'
     },
@@ -123,17 +123,18 @@ const Enchanting = (() => {
     }
 
     // Check gold
-    if ((GS.player.stats.gold || 0) < def.cost.gold) {
+    if ((GS.player.gold || 0) < def.cost.gold) {
       return { ok: false, reason: `Need ${def.cost.gold} gold` };
     }
 
     // Check materials
     if (def.cost.materials) {
-      const inv = GS.player.inventory?.items || [];
+      const inv = GS.player.items || [];
       for (const [matId, qty] of Object.entries(def.cost.materials)) {
-        const have = inv.filter(i => i && i.id === matId).length;
+        const matName = matId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const have = inv.filter(i => i && i.type === 'material' && (i.name === matName || i.name.toLowerCase() === matId.replace(/_/g, ' '))).length;
         if (have < qty) {
-          return { ok: false, reason: `Need ${qty}x ${matId.replace(/_/g, ' ')}` };
+          return { ok: false, reason: `Need ${qty}x ${matName}` };
         }
       }
     }
@@ -148,16 +149,18 @@ const Enchanting = (() => {
     const def = enchantDefs[enchantId];
 
     // Consume gold
-    GS.player.stats.gold -= def.cost.gold;
+    GS.player.gold = (GS.player.gold || 0) - def.cost.gold;
+    GS.player.stats.gold = GS.player.gold;
 
     // Consume materials
     if (def.cost.materials) {
       for (const [matId, qty] of Object.entries(def.cost.materials)) {
         let remaining = qty;
-        const items = GS.player.inventory.items;
-        for (let i = 0; i < items.length && remaining > 0; i++) {
-          if (items[i] && items[i].id === matId) {
-            items[i] = null;
+        const items = GS.player.items;
+        const matName = matId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        for (let i = items.length - 1; i >= 0 && remaining > 0; i--) {
+          if (items[i] && items[i].type === 'material' && (items[i].name === matName || items[i].name.toLowerCase() === matId.replace(/_/g, ' '))) {
+            items.splice(i, 1);
             remaining--;
           }
         }
@@ -184,6 +187,10 @@ const Enchanting = (() => {
     Core.addNotification(`Enchanted: ${item.name}!`, 4);
     if (typeof AudioManager !== 'undefined') AudioManager.playSFX('levelup');
     if (typeof Achievements !== 'undefined') Achievements.onEnchant();
+    if (typeof DailyChallenges !== 'undefined') {
+      DailyChallenges.onEnchant();
+      DailyChallenges.onGoldSpent(def.cost.gold);
+    }
 
     return { ok: true };
   }

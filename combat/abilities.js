@@ -52,19 +52,19 @@ const Abilities = (() => {
     // ======== MAGE SKILLS ========
     fireball: {
       id: 'fireball', name: 'Fireball', class: 'mage', levelReq: 1,
-      mpCost: 10, power: 1.8, type: 'damage', damageType: 'magical',
+      mpCost: 10, power: 1.8, type: 'damage', damageType: 'magical', element: 'fire',
       statusEffect: 'burn', statusChance: 0.3, statusDuration: 3, statusDamage: 5,
       desc: 'Hurl a fireball. May burn.', sfx: 'magic', particleType: 'fire'
     },
     ice_storm: {
       id: 'ice_storm', name: 'Ice Storm', class: 'mage', levelReq: 3,
-      mpCost: 14, power: 1.5, type: 'damage', damageType: 'magical',
+      mpCost: 14, power: 1.5, type: 'damage', damageType: 'magical', element: 'ice',
       statusEffect: 'freeze', statusChance: 0.25, statusDuration: 1,
       desc: 'Icy blast. May freeze.', sfx: 'magic', particleType: 'ice'
     },
     lightning: {
       id: 'lightning', name: 'Lightning', class: 'mage', levelReq: 5,
-      mpCost: 18, power: 2.2, type: 'damage', damageType: 'magical',
+      mpCost: 18, power: 2.2, type: 'damage', damageType: 'magical', element: 'lightning',
       desc: 'Strike with lightning.', sfx: 'magic', particleType: 'magic'
     },
     heal: {
@@ -91,7 +91,7 @@ const Abilities = (() => {
     },
     meteor: {
       id: 'meteor', name: 'Meteor', class: 'mage', levelReq: 15,
-      mpCost: 40, power: 4.0, type: 'damage', damageType: 'magical',
+      mpCost: 40, power: 4.0, type: 'damage', damageType: 'magical', element: 'fire',
       statusEffect: 'burn', statusChance: 0.5, statusDuration: 3, statusDamage: 10,
       desc: 'Call down a meteor.', sfx: 'magic', particleType: 'fire'
     },

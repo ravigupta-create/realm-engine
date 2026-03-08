@@ -219,6 +219,15 @@ const Classes = (() => {
     if (!player.learnedSkillIds) player.learnedSkillIds = new Set();
     player.learnedSkillIds.add(skillId);
     player.skillPoints--;
+
+    // Check if all skills learned for class
+    if (typeof Achievements !== 'undefined') {
+      const cls = defs[player.classType];
+      if (cls && cls.skillTree.every(id => player.learnedSkillIds.has(id))) {
+        Achievements.unlock('all_skills');
+      }
+    }
+
     return true;
   }
 

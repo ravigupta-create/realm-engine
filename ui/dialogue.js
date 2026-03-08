@@ -217,6 +217,7 @@ const Dialogue = (() => {
           GS.player.items.push({ ...item, id: Utils.genId() });
           Core.addNotification(`Bought ${item.name}!`, 2);
           if (typeof AudioManager !== 'undefined') AudioManager.playSFX('coin');
+          if (typeof DailyChallenges !== 'undefined') DailyChallenges.onGoldSpent(cost);
         } else {
           Core.addNotification('Not enough gold!', 2);
         }
@@ -360,7 +361,7 @@ const Dialogue = (() => {
     }
 
     // Item details for selected
-    if (sel !== undefined && _shopSelected < _shopItems.length) {
+    if (_shopSelected < _shopItems.length) {
       const item = _shopItems[_shopSelected];
       const detailY = h - 100;
       Renderer.drawPanel(60, detailY, w - 120, 40);

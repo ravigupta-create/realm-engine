@@ -53,9 +53,12 @@ const GS = {
   // Game progress
   quests: [],
   achievements: [],
+  defeatedBosses: [],
   gameTime: 0,      // in-game seconds
   playTime: 0,      // real seconds played
   saveSlot: 0,
+  ngPlus: 0,
+  difficulty: 'normal',
 
   // Entity system
   entities: [],
@@ -109,6 +112,12 @@ const Core = (() => {
     if (GS.state === GameStates.PLAY || GS.state === GameStates.COMBAT) {
       GS.playTime += dt;
       GS.gameTime += dt * 60; // 1 real second = 1 game minute
+
+      // Periodic time-based achievement checks (every ~60 frames)
+      if (GS.frameCount % 60 === 0 && typeof Achievements !== 'undefined') {
+        if (GS.playTime >= 3600) Achievements.unlock('play_1hr');
+        if (GS.playTime >= 18000) Achievements.unlock('play_5hr');
+      }
     }
 
     // Update
