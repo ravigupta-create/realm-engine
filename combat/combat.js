@@ -1438,7 +1438,11 @@ const Combat = (() => {
     return {
       liveEnemies: live.map(e => ({
         name: e.name, hp: e.stats.hp, maxHp: e.stats.maxHp,
-        level: e.level, isBoss: !!e.isBoss
+        level: e.level, isBoss: !!e.isBoss,
+        enemyType: e.enemyType || '',
+        element: e.stats.element || 'none',
+        weakness: e.stats.weakness || null,
+        resistance: e.stats.resistance || null
       })),
       liveEnemyCount: live.length,
       selectedAction: _selectedAction,
@@ -1450,7 +1454,9 @@ const Combat = (() => {
       combatResult: _combatResult,
       isPlayerTurn: turn.type === 'player' && !_animating && !_combatResult,
       playerStunned: _statusEffectsPlayer.some(e => e.type === 'stun' || e.type === 'freeze'),
-      turnCounter: _turnCounter
+      turnCounter: _turnCounter,
+      allyCount: GS.player && GS.player.party ? GS.player.party.filter(a => a.stats && a.stats.hp > 0).length : 0,
+      hasSummons: GS.player && GS.player.party ? GS.player.party.some(a => a.isSummon) : false
     };
   }
 

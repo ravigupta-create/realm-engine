@@ -391,5 +391,5 @@ const Inventory = (() => {
     Renderer.drawText(`Play Time: ${mins}m ${secs}s`, col1, h - 88, '#888', 12);
   }
 
-  return { update, render, recalcStats, equipItem, unequipItem };
+  return { update, render, recalcStats, equipItem, unequipItem, useItem };
 })();
