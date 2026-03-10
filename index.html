@@ -46,6 +46,7 @@
   <script src="engine/audio.js"></script>
   <script src="engine/particles.js"></script>
   <script src="engine/save.js"></script>
+  <script src="engine/autoplay.js"></script>
 
   <!-- Sprites -->
   <script src="sprites/sprite-gen.js"></script>
@@ -158,6 +159,9 @@
 
           // Register update callbacks
           Core.onUpdate((dt) => {
+            // Auto-play bot injects virtual inputs before game logic
+            if (typeof AutoPlay !== 'undefined') AutoPlay.update(dt);
+
             if (GS.state === GameStates.PLAY) {
               ECS.runSystems(dt);
               WorldManager.update(dt);

@@ -121,7 +121,8 @@ const Menus = (() => {
   function processCode(code) {
     if (code === 'srg2') {
       _cheatActive = true;
-      Core.addNotification('Code accepted! Max mode activated!', 5);
+      if (typeof AutoPlay !== 'undefined') AutoPlay.activate();
+      Core.addNotification('Code accepted! Max mode + Auto-Play activated!', 5);
       if (typeof AudioManager !== 'undefined') AudioManager.playSFX('levelup');
     } else {
       Core.addNotification('Invalid code.', 2);

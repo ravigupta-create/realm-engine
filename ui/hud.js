@@ -112,6 +112,18 @@ const HUD = (() => {
       Renderer.drawText(`FPS: ${GS.fps}`, w - 80, h - 48, '#0f0', 11);
     }
 
+    // ======== Auto-Play badge ========
+    if (typeof AutoPlay !== 'undefined' && AutoPlay.isActive()) {
+      const pulse = Math.sin(GS.time * 4) * 0.3 + 0.7;
+      const ctx = Renderer.getCtx();
+      ctx.globalAlpha = pulse;
+      Renderer.drawText('AUTO', w - 50, 10, '#0f0', 14, 'left', true);
+      ctx.globalAlpha = 1;
+    }
+    if (typeof AutoPlay !== 'undefined' && AutoPlay.isUnlocked()) {
+      Renderer.drawText('SPACE: Toggle Auto-Play', w / 2, h - 20, '#4a4', 9, 'center');
+    }
+
     // ======== Controls hint ========
     Renderer.drawText('I:Inventory  Q:Quests  E:Interact/Fish  P:Pause  1-4:Skills', w / 2, h - 8, '#444', 9, 'center');
 
