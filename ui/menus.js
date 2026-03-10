@@ -12,6 +12,7 @@ const Menus = (() => {
   let _codeMode = false;
   let _codeInput = '';
   let _cheatActive = false;
+  let _muted = false;
 
   // Sub-screen system for pause menu
   let _subScreen = null; // null, 'settings', 'achievements', 'bestiary', 'dailies', 'pets', 'party', 'save_slots', 'load_slots'
@@ -67,6 +68,14 @@ const Menus = (() => {
         }
       }
       return;
+    }
+
+    // Mute toggle (M key)
+    if (Input.justPressed['KeyM']) {
+      _muted = !_muted;
+      if (typeof AudioManager !== 'undefined') {
+        AudioManager.setVolume(_muted ? 0 : GS.settings.sfxVolume, _muted ? 0 : GS.settings.musicVolume);
+      }
     }
 
     if (Input.actionPressed(Input.Actions.UP)) {
@@ -236,6 +245,9 @@ const Menus = (() => {
       const prefix = sel ? '> ' : '  ';
       Renderer.drawText(prefix + titleOptions[i], w / 2, menuY + i * 40, color, size, 'center', sel);
     }
+
+    // Mute indicator
+    Renderer.drawText(_muted ? '[M] Sound: OFF' : '[M] Sound: ON', w - 10, 10, _muted ? '#f44' : '#4a4', 12, 'right');
 
     // Footer
     Renderer.drawText('Arrow Keys / Scroll to navigate | Enter to select', w / 2, h - 60, '#444', 12, 'center');
