@@ -1431,5 +1431,28 @@ const Combat = (() => {
     }
   }
 
-  return { startCombat, update, render, checkLevelUp };
+  // Read-only state for AutoPlay bot
+  function getState() {
+    const turn = getCurrentTurnEntity();
+    const live = getLiveEnemies();
+    return {
+      liveEnemies: live.map(e => ({
+        name: e.name, hp: e.stats.hp, maxHp: e.stats.maxHp,
+        level: e.level, isBoss: !!e.isBoss
+      })),
+      liveEnemyCount: live.length,
+      selectedAction: _selectedAction,
+      subMenu: _subMenu,
+      selectedSkill: _selectedSkill,
+      selectedItem: _selectedItem,
+      selectedTarget: _selectedTarget,
+      animating: _animating,
+      combatResult: _combatResult,
+      isPlayerTurn: turn.type === 'player' && !_animating && !_combatResult,
+      playerStunned: _statusEffectsPlayer.some(e => e.type === 'stun' || e.type === 'freeze'),
+      turnCounter: _turnCounter
+    };
+  }
+
+  return { startCombat, update, render, checkLevelUp, getState };
 })();

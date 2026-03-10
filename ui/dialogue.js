@@ -438,5 +438,20 @@ const Dialogue = (() => {
     return lines;
   }
 
-  return { startDialogue, update, render, get active() { return _active; } };
+  // Read-only state for AutoPlay bot
+  function getState() {
+    if (!_active || !_currentNode) {
+      return { active: _active, typewriterDone: true, choices: [], choiceCount: 0, selectedChoice: 0, shopMode: _shopMode };
+    }
+    return {
+      active: _active,
+      typewriterDone: _typewriterIndex >= _typewriterText.length,
+      choices: (_currentNode.choices || []).map(c => ({ text: c.text, action: c.action || null, next: c.next || null })),
+      choiceCount: (_currentNode.choices || []).length,
+      selectedChoice: _selectedChoice,
+      shopMode: _shopMode
+    };
+  }
+
+  return { startDialogue, update, render, getState, get active() { return _active; } };
 })();
