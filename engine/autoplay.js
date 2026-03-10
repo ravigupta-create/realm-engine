@@ -1,6 +1,7 @@
 // engine/autoplay.js — Auto-play bot mode (activated by "srg2" cheat code)
 // Injects virtual key presses so all animations, sounds, and effects trigger naturally.
 // Reads Combat.getState() and Dialogue.getState() for reliable menu navigation.
+// Uses WorldManager.canMoveTo() for obstacle-aware pathfinding.
 
 const AutoPlay = (() => {
   // ======== FLAGS ========
@@ -17,16 +18,29 @@ const AutoPlay = (() => {
   let _moveDir = null;
   let _lastInteract = 0;
   let _idleTimer = 0;
-  let _stuckTimer = 0;
-  let _lastPos = { x: 0, y: 0 };
   let _zoneTimer = 0;
   let _zoneStayTime = 0;
   let _exitTarget = null;
   let _currentZoneName = '';
   let _lastZoneName = '';
 
+  // Position history for stuck detection + avoidance
+  const POS_HISTORY_LEN = 20;
+  let _posHistory = [];        // ring buffer of { x, y, t }
+  let _posHistoryIdx = 0;
+  let _stuckLevel = 0;         // 0=free, 1=slightly stuck, 2=very stuck, 3=trapped
+  let _stuckTimer = 0;
+  let _wallFollowDir = 0;      // -1=follow left, 1=follow right, 0=off
+  let _wallFollowTimer = 0;
+  let _lastMoveAngle = 0;      // Direction we're trying to go (radians)
+  let _backtrackTimer = 0;     // Force reverse when badly stuck
+
+  // Visited tile tracking for systematic exploration
+  let _visitedTiles = {};
+  let _visitedZone = '';
+
   // ======== COMBAT ========
-  let _wantAction = -1;     // -1 = need to decide
+  let _wantAction = -1;
   let _wantSkillIdx = 0;
   let _wantItemIdx = 0;
   let _wantTargetIdx = 0;
@@ -67,12 +81,187 @@ const AutoPlay = (() => {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  function walkToward(tx, ty) {
+  function dist(x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  // Check if a position is walkable
+  function canWalk(x, y) {
+    return WorldManager.canMoveTo(x, y);
+  }
+
+  // Record current position in history
+  function recordPosition() {
     if (!GS.player) return;
-    const dx = tx - GS.player.x;
-    const dy = ty - GS.player.y;
-    if (Math.abs(dx) > 0.4) holdKey(dx > 0 ? 'ArrowRight' : 'ArrowLeft');
-    if (Math.abs(dy) > 0.4) holdKey(dy > 0 ? 'ArrowDown' : 'ArrowUp');
+    if (_posHistory.length < POS_HISTORY_LEN) {
+      _posHistory.push({ x: GS.player.x, y: GS.player.y, t: GS.time });
+    } else {
+      _posHistory[_posHistoryIdx] = { x: GS.player.x, y: GS.player.y, t: GS.time };
+    }
+    _posHistoryIdx = (_posHistoryIdx + 1) % POS_HISTORY_LEN;
+
+    // Track visited tiles
+    if (_visitedZone !== _currentZoneName) {
+      _visitedTiles = {};
+      _visitedZone = _currentZoneName;
+    }
+    const tileKey = Math.floor(GS.player.x) + ',' + Math.floor(GS.player.y);
+    _visitedTiles[tileKey] = GS.time;
+  }
+
+  // Detect how stuck we are by analyzing position history
+  function updateStuckDetection(dt) {
+    if (_posHistory.length < 5) { _stuckLevel = 0; return; }
+    const now = GS.time;
+    // Check displacement over last 1.5 seconds
+    let oldest = null;
+    for (let i = 0; i < _posHistory.length; i++) {
+      const p = _posHistory[i];
+      if (p && now - p.t < 1.5 && now - p.t > 0.5) {
+        if (!oldest || p.t < oldest.t) oldest = p;
+      }
+    }
+    if (!oldest) { _stuckLevel = 0; return; }
+
+    const displacement = dist(GS.player.x, GS.player.y, oldest.x, oldest.y);
+    const elapsed = now - oldest.t;
+    const speed = displacement / Math.max(0.1, elapsed);
+
+    // Expected speed is ~3 tiles/s. If moving at < 10% of that, we're stuck
+    if (speed < 0.3) {
+      _stuckTimer += dt;
+      if (_stuckTimer > 2.5) _stuckLevel = 3;       // Trapped
+      else if (_stuckTimer > 1.5) _stuckLevel = 2;   // Very stuck
+      else if (_stuckTimer > 0.6) _stuckLevel = 1;   // Slightly stuck
+    } else {
+      _stuckTimer = Math.max(0, _stuckTimer - dt * 2); // Decay when moving
+      if (_stuckTimer < 0.3) _stuckLevel = 0;
+    }
+  }
+
+  // ======== SMART MOVEMENT ========
+  // Walk toward a target with obstacle avoidance
+  function smartWalkToward(tx, ty) {
+    if (!GS.player) return;
+    const px = GS.player.x, py = GS.player.y;
+    const dx = tx - px, dy = ty - py;
+    const angle = Math.atan2(dy, dx);
+    _lastMoveAngle = angle;
+    const step = 0.8; // Look-ahead distance
+
+    // Strategy 1: Try direct path
+    const directX = px + Math.cos(angle) * step;
+    const directY = py + Math.sin(angle) * step;
+    if (canWalk(directX, directY)) {
+      applyMoveAngle(angle);
+      _wallFollowDir = 0;
+      return;
+    }
+
+    // Strategy 2: Try sliding along one axis
+    // Try horizontal slide
+    const hx = px + Math.cos(angle) * step;
+    if (Math.abs(Math.cos(angle)) > 0.1 && canWalk(hx, py)) {
+      holdKey(Math.cos(angle) > 0 ? 'ArrowRight' : 'ArrowLeft');
+      return;
+    }
+    // Try vertical slide
+    const vy = py + Math.sin(angle) * step;
+    if (Math.abs(Math.sin(angle)) > 0.1 && canWalk(px, vy)) {
+      holdKey(Math.sin(angle) > 0 ? 'ArrowDown' : 'ArrowUp');
+      return;
+    }
+
+    // Strategy 3: Try angled deflections (±30°, ±60°, ±90°)
+    const deflections = [0.5, -0.5, 1.0, -1.0, 1.5, -1.5];
+    for (const d of deflections) {
+      const a = angle + d;
+      const nx = px + Math.cos(a) * step;
+      const ny = py + Math.sin(a) * step;
+      if (canWalk(nx, ny)) {
+        applyMoveAngle(a);
+        return;
+      }
+    }
+
+    // Strategy 4: Wall follow mode — hug the wall and trace around it
+    if (_wallFollowDir === 0) _wallFollowDir = Math.random() < 0.5 ? -1 : 1;
+    const wallAngle = angle + (Math.PI / 2) * _wallFollowDir;
+    const wx = px + Math.cos(wallAngle) * step;
+    const wy = py + Math.sin(wallAngle) * step;
+    if (canWalk(wx, wy)) {
+      applyMoveAngle(wallAngle);
+    } else {
+      // Flip wall follow direction
+      _wallFollowDir *= -1;
+      const wallAngle2 = angle + (Math.PI / 2) * _wallFollowDir;
+      applyMoveAngle(wallAngle2);
+    }
+  }
+
+  // Convert an angle to arrow key presses
+  function applyMoveAngle(angle) {
+    const ax = Math.cos(angle), ay = Math.sin(angle);
+    if (ax > 0.3) holdKey('ArrowRight');
+    else if (ax < -0.3) holdKey('ArrowLeft');
+    if (ay > 0.3) holdKey('ArrowDown');
+    else if (ay < -0.3) holdKey('ArrowUp');
+  }
+
+  // Pick a smart wander direction, preferring unvisited tiles
+  function pickSmartWanderDir() {
+    if (!GS.player) return;
+    const px = GS.player.x, py = GS.player.y;
+    const zone = WorldManager.getZone();
+    if (!zone) { applyMoveAngle(Math.random() * Math.PI * 2); return; }
+
+    // Score 8 directions by: unvisited tiles ahead + passability
+    const directions = [];
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const lookDist = 3;
+      const tx = px + Math.cos(a) * lookDist;
+      const ty = py + Math.sin(a) * lookDist;
+
+      // Check passability at 1, 2, 3 tiles ahead
+      let passable = 0;
+      let unvisited = 0;
+      for (let d = 1; d <= 3; d++) {
+        const cx = px + Math.cos(a) * d;
+        const cy = py + Math.sin(a) * d;
+        if (canWalk(cx, cy)) {
+          passable++;
+          const key = Math.floor(cx) + ',' + Math.floor(cy);
+          if (!_visitedTiles[key]) unvisited++;
+          else {
+            // Prefer tiles visited long ago over recently visited ones
+            const age = GS.time - (_visitedTiles[key] || 0);
+            if (age > 30) unvisited += 0.5;
+          }
+        }
+      }
+      // Bounds check
+      if (tx < 1 || tx >= zone.width - 1 || ty < 1 || ty >= zone.height - 1) passable -= 2;
+
+      directions.push({ angle: a, score: passable * 2 + unvisited * 3 });
+    }
+
+    // Pick best direction, with some randomness
+    directions.sort((a, b) => b.score - a.score);
+    // Weighted random from top 3
+    const topN = directions.slice(0, 3);
+    const totalScore = topN.reduce((s, d) => s + Math.max(1, d.score), 0);
+    let r = Math.random() * totalScore;
+    for (const d of topN) {
+      r -= Math.max(1, d.score);
+      if (r <= 0) {
+        _lastMoveAngle = d.angle;
+        return d.angle;
+      }
+    }
+    _lastMoveAngle = topN[0].angle;
+    return topN[0].angle;
   }
 
   // ======== INIT ========
@@ -85,7 +274,7 @@ const AutoPlay = (() => {
       if (e.code === 'Space' && _unlocked) {
         _active = !_active;
         Core.addNotification(_active ? 'Auto-Play ON' : 'Auto-Play OFF', 2);
-        if (_active) { _wantAction = -1; }
+        if (_active) { _wantAction = -1; _stuckLevel = 0; _stuckTimer = 0; }
         e.stopImmediatePropagation();
         e.preventDefault();
       }
@@ -112,12 +301,15 @@ const AutoPlay = (() => {
   }
 
   // ================================================================
-  //  EXPLORATION — purposeful movement, enemy seeking, zone navigation
+  //  EXPLORATION — obstacle-aware movement, systematic exploration
   // ================================================================
   function botExplore(dt) {
     _lastInteract += dt;
     _moveTimer -= dt;
     _zoneTimer += dt;
+
+    recordPosition();
+    updateStuckDetection(dt);
 
     // Detect zone changes
     if (GS.currentZone !== _currentZoneName) {
@@ -126,6 +318,9 @@ const AutoPlay = (() => {
       _zoneTimer = 0;
       _zoneStayTime = rand(40, 80);
       _exitTarget = null;
+      _stuckLevel = 0;
+      _stuckTimer = 0;
+      _wallFollowDir = 0;
     }
 
     // Fishing takes priority
@@ -149,36 +344,37 @@ const AutoPlay = (() => {
       }
     }
 
-    // Stuck detection — change direction when blocked
-    if (GS.player) {
-      const moved = Math.abs(GS.player.x - _lastPos.x) + Math.abs(GS.player.y - _lastPos.y);
-      if (moved < 0.05) {
-        _stuckTimer += dt;
-        if (_stuckTimer > 1.2) {
-          _moveDir = null;
-          _moveTimer = 0;
-          _exitTarget = null;
-          _stuckTimer = 0;
-        }
-      } else {
-        _stuckTimer = 0;
-      }
-      _lastPos.x = GS.player.x;
-      _lastPos.y = GS.player.y;
-    }
-
     // Occasional idle pause (like a real player thinking)
-    if (_idleTimer <= 0 && Math.random() < 0.002) {
+    if (_idleTimer <= 0 && _stuckLevel === 0 && Math.random() < 0.002) {
       _idleTimer = rand(0.6, 2.0);
     }
     if (_idleTimer > 0) {
       _idleTimer -= dt;
-      return; // Stand still
+      return;
+    }
+
+    // === STUCK RECOVERY ===
+    if (_stuckLevel >= 2) {
+      _backtrackTimer -= dt;
+      if (_stuckLevel === 3 || _backtrackTimer <= 0) {
+        // Level 3: completely reverse direction + random offset
+        const reverseAngle = _lastMoveAngle + Math.PI + rand(-0.8, 0.8);
+        applyMoveAngle(reverseAngle);
+        _backtrackTimer = rand(0.8, 1.5);
+        _moveDir = null;
+        _exitTarget = null;
+        _wallFollowDir = 0;
+        if (_stuckLevel === 3) {
+          _stuckTimer = 0;
+          _stuckLevel = 1;
+        }
+        return;
+      }
     }
 
     const nearby = WorldManager.getEntitiesNear(GS.player.x, GS.player.y, 6);
 
-    // Priority 1: Interact with very close NPCs/chests we're facing
+    // Priority 1: Interact with very close interactable entities
     if (_lastInteract > 2.5) {
       for (const ent of nearby) {
         if (ent === GS.player) continue;
@@ -200,7 +396,7 @@ const AutoPlay = (() => {
       }
     }
 
-    // Priority 3: Walk toward interesting entities
+    // Priority 3: Walk toward interesting entities (obstacle-aware)
     let bestTarget = null;
     let bestScore = 0;
     for (const ent of nearby) {
@@ -208,7 +404,7 @@ const AutoPlay = (() => {
       const d = distTo(ent);
 
       if (ent.isEnemy && ent.stats && ent.stats.hp > 0 && !ent.defeated) {
-        const score = 5 + (6 - d); // Enemies are highest priority
+        const score = 5 + (6 - d);
         if (score > bestScore) { bestScore = score; bestTarget = ent; }
       }
       if (ent.isChest && !ent.opened) {
@@ -222,39 +418,46 @@ const AutoPlay = (() => {
     }
 
     if (bestTarget) {
-      walkToward(bestTarget.x, bestTarget.y);
-      _moveTimer = 0.3;
+      smartWalkToward(bestTarget.x, bestTarget.y);
+      _moveTimer = 0.15;
       return;
     }
 
-    // Priority 4: Navigate toward zone exit to explore new zones
+    // Priority 4: Navigate toward zone exit
     if (_zoneTimer > _zoneStayTime) {
       if (!_exitTarget) _exitTarget = pickExit();
       if (_exitTarget) {
-        walkToward(_exitTarget.x + 0.5, _exitTarget.y + 0.5);
-        _moveTimer = 0.3;
+        smartWalkToward(_exitTarget.x + 0.5, _exitTarget.y + 0.5);
+        _moveTimer = 0.15;
         return;
       }
     }
 
-    // Default: wander naturally
+    // Default: smart wander — prefer unvisited tiles, avoid walls
     if (_moveTimer <= 0) {
-      const allDirs = [
-        ['ArrowUp'], ['ArrowDown'], ['ArrowLeft'], ['ArrowRight'],
-        ['ArrowUp', 'ArrowRight'], ['ArrowUp', 'ArrowLeft'],
-        ['ArrowDown', 'ArrowRight'], ['ArrowDown', 'ArrowLeft']
-      ];
-      // Bias toward keeping current direction (momentum)
-      if (_moveDir && Math.random() < 0.65) {
-        // Keep same direction
-      } else {
-        _moveDir = allDirs[Math.floor(Math.random() * allDirs.length)];
+      const angle = pickSmartWanderDir();
+      if (angle !== undefined) {
+        _moveDir = angle;
       }
-      _moveTimer = rand(1.5, 4.0);
+      _moveTimer = rand(1.5, 3.5);
     }
 
-    if (_moveDir) {
-      for (const k of _moveDir) holdKey(k);
+    if (_moveDir !== null) {
+      // Check if current wander direction is blocked, and adjust
+      const step = 0.8;
+      const nx = GS.player.x + Math.cos(_moveDir) * step;
+      const ny = GS.player.y + Math.sin(_moveDir) * step;
+      if (canWalk(nx, ny)) {
+        applyMoveAngle(_moveDir);
+      } else {
+        // Immediate redirect: pick a new passable direction
+        const newAngle = pickSmartWanderDir();
+        if (newAngle !== undefined) {
+          _moveDir = newAngle;
+          applyMoveAngle(_moveDir);
+        }
+        _moveTimer = rand(0.5, 1.5);
+      }
     }
   }
 
@@ -265,7 +468,6 @@ const AutoPlay = (() => {
       !e.requireBoss || (GS.defeatedBosses && GS.defeatedBosses.includes(e.requireBoss))
     );
     if (usable.length === 0) return null;
-    // Prefer exits NOT leading back where we came from
     const forward = usable.filter(e => e.target !== _lastZoneName);
     const pool = forward.length > 0 ? forward : usable;
     return pool[Math.floor(Math.random() * pool.length)];
@@ -279,7 +481,7 @@ const AutoPlay = (() => {
     if (fishState.phase === 'bite') {
       if (_reelTimer <= 0) {
         pressKey('Enter');
-        _reelTimer = rand(0.04, 0.13); // Quick but variable
+        _reelTimer = rand(0.04, 0.13);
       }
     } else {
       _reelTimer = 0;
@@ -296,14 +498,12 @@ const AutoPlay = (() => {
     if (!GS.player || !GS.player.stats) return;
     const cs = Combat.getState();
 
-    // Not our turn — wait
     if (!cs.isPlayerTurn) {
       _wantAction = -1;
       _combatDelay = 0.1;
       return;
     }
 
-    // Stunned/frozen — press confirm to skip turn
     if (cs.playerStunned) {
       pressKey('Enter');
       _combatDelay = rand(0.4, 0.7);
@@ -359,21 +559,17 @@ const AutoPlay = (() => {
 
     // === Main action menu ===
 
-    // Decide what to do (once per turn)
     if (_wantAction < 0) {
       const decision = decideCombatAction(cs);
       _wantAction = decision.action;
       _wantSkillIdx = decision.skillIdx || 0;
       _wantItemIdx = decision.itemIdx || 0;
       _wantTargetIdx = decision.targetIdx;
-      // "Thinking" delay — longer for complex decisions, shorter for simple attack
       _combatDelay = _wantAction === 0 ? rand(0.3, 0.7) : rand(0.5, 1.2);
-      // Occasional extra hesitation
       if (Math.random() < 0.1) _combatDelay += rand(0.3, 0.8);
       return;
     }
 
-    // Navigate to desired action
     if (cs.selectedAction < _wantAction) {
       pressKey('ArrowDown');
       _combatDelay = rand(0.08, 0.18);
@@ -381,10 +577,8 @@ const AutoPlay = (() => {
       pressKey('ArrowUp');
       _combatDelay = rand(0.08, 0.18);
     } else {
-      // Confirm the action
       pressKey('Enter');
       if (_wantAction >= 3) {
-        // Defend/Flee — executes immediately
         _combatDelay = rand(0.5, 0.9);
         _wantAction = -1;
       } else {
@@ -404,12 +598,10 @@ const AutoPlay = (() => {
     if (hpPct < 0.3) {
       const healIdx = skills.findIndex(sk => sk.type === 'heal' && s.mp >= sk.mpCost);
       if (healIdx >= 0) return { action: 1, skillIdx: healIdx, targetIdx };
-      // Try heal item
       const items = (GS.player.items || []).filter(i => i.type === 'consumable');
       const hpItem = items.findIndex(i => i.effect === 'heal_hp' || i.effect === 'heal_both' || i.effect === 'heal_all');
       if (hpItem >= 0) return { action: 2, itemIdx: hpItem, targetIdx };
-      // Defend as last resort
-      return { action: 3, targetIdx };
+      return { action: 3, targetIdx }; // Defend
     }
 
     // MODERATE HEAL (HP < 55%, 40% chance)
@@ -418,10 +610,20 @@ const AutoPlay = (() => {
       if (healIdx >= 0) return { action: 1, skillIdx: healIdx, targetIdx };
     }
 
-    // BUFF (12% chance, adds variety)
+    // BUFF (12% chance)
     if (Math.random() < 0.12) {
       const buffIdx = skills.findIndex(sk => sk.type === 'buff' && s.mp >= sk.mpCost);
       if (buffIdx >= 0) return { action: 1, skillIdx: buffIdx, targetIdx };
+    }
+
+    // FOCUS FIRE: if an enemy is nearly dead (< 20% HP), always attack it
+    if (cs.liveEnemies && cs.liveEnemies.length > 1) {
+      for (let i = 0; i < cs.liveEnemies.length; i++) {
+        const e = cs.liveEnemies[i];
+        if (e.hp > 0 && e.hp < e.maxHp * 0.2) {
+          return { action: 0, targetIdx: i };
+        }
+      }
     }
 
     // DAMAGE SKILL (MP > 20%, 55% chance)
@@ -429,12 +631,10 @@ const AutoPlay = (() => {
       const dmgSkills = skills.map((sk, i) => ({ sk, i }))
         .filter(({ sk }) => sk.type === 'damage' && s.mp >= sk.mpCost);
       if (dmgSkills.length > 0) {
-        // Prefer AoE when multiple enemies
         if (cs.liveEnemyCount > 1) {
           const aoe = dmgSkills.find(({ sk }) => sk.aoe || sk.targetType === 'all_enemies');
           if (aoe) return { action: 1, skillIdx: aoe.i, targetIdx };
         }
-        // Otherwise pick strongest (highest power * hits)
         const best = dmgSkills.reduce((a, b) =>
           (b.sk.power || 1) * (b.sk.hits || 1) > (a.sk.power || 1) * (a.sk.hits || 1) ? b : a
         );
@@ -442,7 +642,6 @@ const AutoPlay = (() => {
       }
     }
 
-    // DEFAULT: Basic Attack
     return { action: 0, targetIdx };
   }
 
@@ -469,22 +668,19 @@ const AutoPlay = (() => {
     const ds = Dialogue.getState();
     if (!ds.active) return;
 
-    // In shop mode — exit immediately
     if (ds.shopMode) {
       pressKey('Escape');
       _dialogueDelay = rand(0.5, 1.0);
       return;
     }
 
-    // Typewriter still going — skip it
     if (!ds.typewriterDone) {
       pressKey('Enter');
       _dialogueSkippedTypewriter = true;
-      _dialogueDelay = rand(0.6, 1.4); // Simulate "reading" the full text
+      _dialogueDelay = rand(0.6, 1.4);
       return;
     }
 
-    // No choices — advance dialogue
     if (ds.choiceCount === 0) {
       pressKey('Enter');
       _dialogueSkippedTypewriter = false;
@@ -492,11 +688,8 @@ const AutoPlay = (() => {
       return;
     }
 
-    // Smart choice selection
     const choices = ds.choices;
     let bestIdx = 0;
-
-    // Priority: full_heal > accept_quest > normal dialogue > avoid shops
     const shopActions = ['open_shop', 'open_sell', 'open_crafting', 'open_enchanting', 'open_skills'];
     let foundGood = false;
 
@@ -507,7 +700,6 @@ const AutoPlay = (() => {
     }
 
     if (!foundGood) {
-      // Find a non-shop choice (prefer ones with 'next' to continue dialogue, or null to exit)
       for (let i = 0; i < choices.length; i++) {
         if (!choices[i].action || !shopActions.includes(choices[i].action)) {
           bestIdx = i;
@@ -515,11 +707,9 @@ const AutoPlay = (() => {
           break;
         }
       }
-      // If all choices are shop actions, pick the last one (usually "Goodbye")
       if (!foundGood) bestIdx = choices.length - 1;
     }
 
-    // Navigate to best choice
     if (ds.selectedChoice < bestIdx) {
       pressKey('ArrowDown');
       _dialogueDelay = rand(0.12, 0.22);
@@ -564,7 +754,7 @@ const AutoPlay = (() => {
   function botVictory(dt) {
     if (_actionTimer < 2.0) return;
     _actionTimer = 0;
-    pressKey('Enter'); // NG+ is first option
+    pressKey('Enter');
   }
 
   // ================================================================
@@ -577,14 +767,13 @@ const AutoPlay = (() => {
 
     switch (_classPhase) {
       case 'browse': {
-        if (_classTimer < 0.7) return; // Initial pause
+        if (_classTimer < 0.7) return;
         if (_classBrowseCount < _classBrowseTarget) {
           pressKey('ArrowDown');
           _classBrowseCount++;
-          _classDelay = rand(0.35, 0.7); // "Reading" each class description
+          _classDelay = rand(0.35, 0.7);
           return;
         }
-        // Occasionally go back up (reconsidering)
         if (_classBrowseCount === _classBrowseTarget && Math.random() < 0.3) {
           pressKey('ArrowUp');
           _classBrowseCount++;
@@ -592,11 +781,11 @@ const AutoPlay = (() => {
           return;
         }
         _classPhase = 'pick';
-        _classDelay = rand(0.6, 1.2); // "Deciding" pause
+        _classDelay = rand(0.6, 1.2);
         return;
       }
       case 'pick': {
-        pressKey('Enter'); // Confirm class → enters naming mode
+        pressKey('Enter');
         _chosenName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
         _nameIdx = 0;
         _classPhase = 'naming';
@@ -609,13 +798,12 @@ const AutoPlay = (() => {
           if (ch === ' ') pressKey('Space');
           else pressKey('Key' + ch);
           _nameIdx++;
-          // Variable typing: slower at start/end, faster in middle
           const progress = _nameIdx / _chosenName.length;
           _classDelay = (progress < 0.2 || progress > 0.8) ? rand(0.12, 0.25) : rand(0.06, 0.14);
           return;
         }
         _classPhase = 'confirm_name';
-        _classDelay = rand(0.3, 0.6); // Pause before confirming
+        _classDelay = rand(0.3, 0.6);
         return;
       }
       case 'confirm_name': {
@@ -635,7 +823,7 @@ const AutoPlay = (() => {
     if (_actionTimer < 0.5) return;
     _actionTimer = 0;
 
-    pressKey('Enter'); // "New Game" is already selected
+    pressKey('Enter');
     _titleTimer = 0;
     _classTimer = 0;
     _classPhase = 'browse';
@@ -649,6 +837,10 @@ const AutoPlay = (() => {
     _exitTarget = null;
     _currentZoneName = '';
     _lastZoneName = '';
+    _stuckLevel = 0;
+    _stuckTimer = 0;
+    _posHistory = [];
+    _visitedTiles = {};
   }
 
   // Init immediately
