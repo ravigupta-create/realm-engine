@@ -11,8 +11,29 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Password Gate -->
+  <div id="password-screen">
+    <div id="pw-logo">
+      <h1>REALM ENGINE</h1>
+      <div class="pw-subtitle">A Browser RPG Adventure</div>
+    </div>
+    <div class="pw-divider"><div class="diamond"></div></div>
+    <div id="pw-form">
+      <label id="pw-label">Enter Password</label>
+      <input type="password" id="pw-input" maxlength="32" autocomplete="off" spellcheck="false" placeholder="Password">
+      <button id="pw-submit">Enter</button>
+      <div id="pw-error"></div>
+      <div id="pw-attempts"></div>
+    </div>
+    <div id="pw-lockout" style="display:none;">
+      <div id="pw-lock-icon">&#x1F512;</div>
+      <div id="pw-lock-msg">Too many failed attempts</div>
+      <div id="pw-lock-timer"></div>
+    </div>
+  </div>
+
   <!-- Loading Screen -->
-  <div id="loading-screen">
+  <div id="loading-screen" style="display:none;">
     <div id="loading-logo">
       <h1>REALM ENGINE</h1>
       <div class="subtitle">A Browser RPG Adventure</div>
@@ -96,6 +117,114 @@
   <!-- Main init -->
   <script>
     (function () {
+      // ======== PASSWORD GATE ========
+      const PW_KEY = 're_pw_lockout';
+      const PW_HASH = 'srg213';
+      const MAX_ATTEMPTS = 4;
+      const LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+      const pwScreen = document.getElementById('password-screen');
+      const pwInput = document.getElementById('pw-input');
+      const pwSubmit = document.getElementById('pw-submit');
+      const pwError = document.getElementById('pw-error');
+      const pwAttempts = document.getElementById('pw-attempts');
+      const pwForm = document.getElementById('pw-form');
+      const pwLockout = document.getElementById('pw-lockout');
+      const pwLockTimer = document.getElementById('pw-lock-timer');
+
+      let attempts = 0;
+      let lockoutInterval = null;
+
+      function getLockout() {
+        try {
+          const raw = localStorage.getItem(PW_KEY);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (e) { return null; }
+      }
+
+      function setLockout(until) {
+        localStorage.setItem(PW_KEY, JSON.stringify({ until: until }));
+      }
+
+      function clearLockout() {
+        localStorage.removeItem(PW_KEY);
+      }
+
+      function formatTime(ms) {
+        const s = Math.max(0, Math.ceil(ms / 1000));
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return m + ':' + (sec < 10 ? '0' : '') + sec;
+      }
+
+      function showLockoutUI(untilTime) {
+        pwForm.style.display = 'none';
+        pwLockout.style.display = 'block';
+
+        if (lockoutInterval) clearInterval(lockoutInterval);
+        lockoutInterval = setInterval(function () {
+          const remaining = untilTime - Date.now();
+          if (remaining <= 0) {
+            clearInterval(lockoutInterval);
+            clearLockout();
+            attempts = 0;
+            pwForm.style.display = 'block';
+            pwLockout.style.display = 'none';
+            pwError.textContent = '';
+            pwAttempts.textContent = '';
+            pwInput.value = '';
+            pwInput.focus();
+          } else {
+            pwLockTimer.textContent = 'Try again in ' + formatTime(remaining);
+          }
+        }, 250);
+
+        const remaining = untilTime - Date.now();
+        pwLockTimer.textContent = 'Try again in ' + formatTime(remaining);
+      }
+
+      function checkPassword() {
+        const val = pwInput.value;
+        if (val === PW_HASH) {
+          clearLockout();
+          pwScreen.classList.add('hidden');
+          document.getElementById('loading-screen').style.display = '';
+          boot();
+          return;
+        }
+
+        attempts++;
+        const remaining = MAX_ATTEMPTS - attempts;
+        pwInput.value = '';
+        pwError.textContent = 'Incorrect password';
+        pwError.classList.add('shake');
+        setTimeout(function () { pwError.classList.remove('shake'); }, 500);
+
+        if (remaining > 0) {
+          pwAttempts.textContent = remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining';
+        } else {
+          const until = Date.now() + LOCKOUT_MS;
+          setLockout(until);
+          showLockoutUI(until);
+        }
+      }
+
+      // Check for existing lockout on load
+      const existing = getLockout();
+      if (existing && existing.until > Date.now()) {
+        showLockoutUI(existing.until);
+      } else {
+        if (existing) clearLockout();
+        pwInput.focus();
+      }
+
+      pwSubmit.addEventListener('click', checkPassword);
+      pwInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') checkPassword();
+      });
+
+      // ======== GAME BOOT (called after password verified) ========
       const loadingBar = document.getElementById('loading-bar');
       const loadingText = document.getElementById('loading-text');
       const loadingScreen = document.getElementById('loading-screen');
@@ -300,7 +429,7 @@
         }
       }
 
-      boot();
+      // boot() is called by password gate on success — do not auto-start
     })();
   </script>
 </body>
