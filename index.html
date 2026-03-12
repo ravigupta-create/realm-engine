@@ -19,8 +19,8 @@
     </div>
     <div class="pw-divider"><div class="diamond"></div></div>
     <div id="pw-form">
-      <label id="pw-label">Enter Password</label>
-      <input type="password" id="pw-input" maxlength="32" autocomplete="off" spellcheck="false" placeholder="Password">
+      <label id="pw-label">Enter Access Code</label>
+      <input type="text" id="pw-input" maxlength="32" autocomplete="off" spellcheck="false" placeholder="Access code">
       <button id="pw-submit">Enter</button>
       <div id="pw-error"></div>
       <div id="pw-attempts"></div>
@@ -197,7 +197,7 @@
         attempts++;
         const remaining = MAX_ATTEMPTS - attempts;
         pwInput.value = '';
-        pwError.textContent = 'Incorrect password';
+        pwError.textContent = 'Incorrect code';
         pwError.classList.add('shake');
         setTimeout(function () { pwError.classList.remove('shake'); }, 500);
 
